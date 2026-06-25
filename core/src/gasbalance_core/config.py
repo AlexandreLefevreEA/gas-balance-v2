@@ -12,13 +12,27 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# core/src/gasbalance_core/config.py -> parents[3] is the repo root.
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+
+def _repo_dotenv() -> Path:
+    """Locate the repo-root `.env` by walking up to the workspace marker (uv.lock/.git).
+
+    Robust to file moves — no hard-coded parent depth. Falls back to the known layout if
+    no marker is found (e.g. a prod image without .git), where `.env` is simply absent and
+    pydantic reads real env vars instead. Connectors import `DOTENV` instead of recomputing.
+    """
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "uv.lock").exists() or (parent / ".git").exists():
+            return parent / ".env"
+    return here.parents[3] / ".env"  # core/src/gasbalance_core/config.py -> repo root
+
+
+DOTENV = _repo_dotenv()
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=_REPO_ROOT / ".env",
+        env_file=DOTENV,
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,

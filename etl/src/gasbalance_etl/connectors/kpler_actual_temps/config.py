@@ -7,18 +7,16 @@ the repo-root `.env`; prod injects real env vars.
 from __future__ import annotations
 
 from functools import lru_cache
-from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# .../etl/src/gasbalance_etl/connectors/kpler_actual_temps/config.py -> parents[5] = repo root.
-_REPO_ROOT = Path(__file__).resolve().parents[5]
+from gasbalance_core.config import DOTENV
 
 
 class KplerSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="KPLER_",
-        env_file=_REPO_ROOT / ".env",
+        env_file=DOTENV,
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,

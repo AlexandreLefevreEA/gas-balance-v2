@@ -6,9 +6,11 @@ mapping, and the temperature-range gate (an absurd value is rejected by the sche
 
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
-from typing import Any
+from typing import Any, cast
 
+import httpx
 import pandas as pd
 import pandera.errors as pa_errors
 import pytest
@@ -59,3 +61,35 @@ def test_absurd_temperature_is_blocked() -> None:
     df = kp.to_canonical(_raw("FR", 999.0))  # e.g. a Kelvin mistake
     with pytest.raises(pa_errors.SchemaErrors):
         schema.validate(df, lazy=True)
+
+
+class _FakeResp:
+    def __init__(self, status: int) -> None:
+        self.status_code = status
+        self.headers: dict[str, str] = {"ratelimit-reset": "0"}  # 0s backoff -> fast test
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
+
+    def json(self) -> dict[str, Any]:
+        return {"data": []}
+
+
+class _FakeClient:
+    def __init__(self, statuses: list[int]) -> None:
+        self._resps = [_FakeResp(s) for s in statuses]
+        self.calls = 0
+
+    async def get(self, endpoint: str, params: Any = None) -> _FakeResp:
+        r = self._resps[self.calls]
+        self.calls += 1
+        return r
+
+
+def test_request_retries_transient_then_succeeds() -> None:
+    # a 429 and a 502 must be retried (not abort the backfill); the run survives.
+    client = _FakeClient([429, 502, 200])
+    resp = asyncio.run(kp._request(cast(httpx.AsyncClient, client), {}))
+    assert resp.status_code == 200
+    assert client.calls == 3

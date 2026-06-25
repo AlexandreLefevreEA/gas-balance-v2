@@ -8,6 +8,7 @@ dependencies = [
   "pandas>=2.2",
   "pandera>=0.20",
   "httpx>=0.27",
+  "aiometer>=0.5",  # async concurrency + rate limiting (Kpler backfill)
   "pyyaml>=6",
   # sqlalchemy + pydantic-settings come transitively via gasbalance-core
 ]

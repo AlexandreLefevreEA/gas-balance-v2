@@ -23,6 +23,18 @@ members = [
 ]
 
 [[package]]
+name = "aiometer"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/77/cf/9d81b707241b7fb6e8f6bd896cd43d1d93f9e126b5577d962de490bac644/aiometer-1.0.0.tar.gz", hash = "sha256:c492933dbd3a90c619473c3f242d00842ee274f6285a44b5d5fbee228a407056", size = 18427, upload-time = "2025-04-04T09:26:25.634Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/40/0b/b8cd78305e788a9837c41c75183a1085df3c4e5d5758681fb623c33d5848/aiometer-1.0.0-py3-none-any.whl", hash = "sha256:a733315788ff9b474a924de865f9ecee2c29b8f5f9ac26db7660976affa6bf2e", size = 12436, upload-time = "2025-04-04T09:26:24.184Z" },
+]
+
+[[package]]
 name = "alembic"
 version = "1.18.4"
 source = { registry = "https://pypi.org/simple" }
@@ -245,6 +257,7 @@ name = "gasbalance-etl"
 version = "0.0.0"
 source = { editable = "etl" }
 dependencies = [
+    { name = "aiometer" },
     { name = "gasbalance-core" },
     { name = "httpx" },
     { name = "pandas" },
@@ -254,6 +267,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiometer", specifier = ">=0.5" },
     { name = "gasbalance-core", editable = "core" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "pandas", specifier = ">=2.2" },
