@@ -1,7 +1,7 @@
 """CE connector contract test — fixture-based, no live network, no DB.
 
-Covers the multi-id CSV parser, the compose logic (sum positive - sum negative,
-incl. pure-negative), and the data-trust gate (non-finite values are rejected).
+Covers the multi-id CSV parser and the data-trust gate (non-finite values are
+rejected). The shared compose primitive is tested in test_compose.py.
 """
 
 from __future__ import annotations
@@ -27,57 +27,6 @@ def test_parse_multi_csv() -> None:
     assert set(out) == {"55306", "55259"}
     assert out["55306"].loc[dt.date(2014, 1, 1)] == 10.0
     assert dt.date(2014, 1, 2) not in out["55259"].index
-
-
-def _wide() -> pd.DataFrame:
-    idx = pd.to_datetime([dt.date(2014, 1, 1), dt.date(2014, 1, 2)])
-    return pd.DataFrame({"55306": [10.0, 20.0], "55259": [3.0, 4.0]}, index=idx)
-
-
-def test_compose_positive_minus_negative() -> None:
-    entries = [
-        {
-            "code": "CE.X",
-            "name": "X",
-            "group": "storage",
-            "sub_group": None,
-            "area": "HR",
-            "unit": "mcm",
-            "positive": ["55306"],
-            "negative": ["55259"],
-        }
-    ]
-    df = ce._compose(entries, _wide())
-    assert list(df.columns) == [
-        "date",
-        "series_id",
-        "name",
-        "group",
-        "sub_group",
-        "area",
-        "value",
-        "source",
-    ]
-    assert df["value"].tolist() == [7.0, 16.0]  # 10-3, 20-4
-    assert (df["source"] == "ce").all()
-    schema.validate(df, lazy=True)
-
-
-def test_compose_pure_negative() -> None:
-    entries = [
-        {
-            "code": "CE.Y",
-            "name": "Y",
-            "group": "storage",
-            "sub_group": "withdrawal",
-            "area": "HR",
-            "unit": "mcm",
-            "positive": [],
-            "negative": ["55259"],
-        }
-    ]
-    df = ce._compose(entries, _wide())
-    assert df["value"].tolist() == [-3.0, -4.0]
 
 
 def test_nonfinite_value_is_blocked() -> None:

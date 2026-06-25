@@ -1,0 +1,82 @@
+# Derived series — computed from already-loaded v2 series, stored in `observation`
+# flagged is_derived. Runs after the raw connectors (registered last). See ADR 0007.
+#
+# value = sum(positive) - sum(negative). Inputs are selected by category, not by
+# listing codes (legacy aggregates the same way, see compute_derived_data.py):
+#   positive_select / negative_select: list of {group, sub_group?, area?} filters.
+#     - group is required; sub_group/area match only when stated (explicit `null`
+#       matches a NULL value, e.g. LNG sendout vs level/capacity).
+#     - selection only ever picks raw (is_derived=false) series, so derived series
+#       never feed each other.
+# Explicit `positive`/`negative` code lists also work (same as ce.yaml) if needed.
+#
+# Sign convention (ported from legacy eu_balance.yaml / balance.py): supply side =
+# production + lng sendout + pipeline + CE imbalance (`supply` group) + border flows;
+# demand side = final demand; storage withdrawal nets the residual.
+
+- code: EU.SUPPLY
+  name: EU Supply (ex storage)
+  group: balance
+  sub_group: supply
+  area: null
+  unit: mcm
+  is_derived: true
+  positive_select:
+  - {group: production}
+  - {group: lng, sub_group: null}
+  - {group: pipeline}
+  - {group: supply}
+  - {group: border_flows}
+
+- code: EU.DEMAND
+  name: EU Demand
+  group: balance
+  sub_group: demand
+  area: null
+  unit: mcm
+  is_derived: true
+  positive_select:
+  - {group: demand}
+
+- code: EU.STORAGE.WITHDRAWAL
+  name: EU Storage Withdrawal
+  group: balance
+  sub_group: storage
+  area: null
+  unit: mcm
+  is_derived: true
+  positive_select:
+  - {group: storage, sub_group: withdrawal}
+
+- code: EU.STORAGE.LEVEL
+  name: EU Storage Level
+  group: balance
+  sub_group: storage
+  area: null
+  unit: mcm
+  is_derived: true
+  positive_select:
+  - {group: storage, sub_group: level}
+
+# Headline residual: supply - demand - storage_withdrawal ≈ 0 (legacy identity).
+# `check: zero_sum` is intentionally left OFF until the residual is confirmed to
+# close on real data (v2 storage-withdrawal sign needs verifying) — enabling it
+# would block the whole derived run on breach. To turn on:
+#   check: zero_sum
+#   tolerance: <mcm>
+- code: EU.BALANCE
+  name: EU Balance (Supply - Demand - Storage Withdrawal)
+  group: balance
+  sub_group: null
+  area: null
+  unit: mcm
+  is_derived: true
+  positive_select:
+  - {group: production}
+  - {group: lng, sub_group: null}
+  - {group: pipeline}
+  - {group: supply}
+  - {group: border_flows}
+  negative_select:
+  - {group: demand}
+  - {group: storage, sub_group: withdrawal}

@@ -9,8 +9,8 @@ needs are fetched in a few **batched** requests (not one-per-series), run **asyn
 `…bulk` endpoints are 14-day-capped, so they suit incremental, not a since-2014 backfill.
 
 Each v2 series is composed from raw CE seriesIds: value = sum(positive) - sum(negative),
-aligned by date (skipna=False), per `settings/ce.yaml` (ported from legacy). DerivedData
-(cross-column balances) is out of scope here — that belongs in a later transform/feature.
+aligned by date (skipna=False), per `settings/ce.yaml` (ported from legacy). Cross-column
+balances are computed downstream by the derived stage (`transforms/derived.py`, ADR 0007).
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ import pandas as pd
 
 from gasbalance_etl.connectors.ce.config import CeSettings, get_ce_settings
 from gasbalance_etl.settings import load_series_dict
+from gasbalance_etl.transforms.compose import compose, referenced_ids
 from gasbalance_etl.validation.canonical import canonical_schema
 
 log = logging.getLogger(__name__)
@@ -43,15 +44,6 @@ _MAX_CONCURRENCY = 6
 
 def series_dict() -> list[dict[str, Any]]:
     return load_series_dict(source)
-
-
-def _raw_ids(entries: list[dict[str, Any]]) -> list[str]:
-    """Unique raw CE seriesIds referenced by the dictionary (order-preserving)."""
-    seen: dict[str, None] = {}
-    for e in entries:
-        for cid in (e.get("positive") or []) + (e.get("negative") or []):
-            seen[cid] = None
-    return list(seen)
 
 
 def _parse_multi(csv_text: str) -> dict[str, pd.Series]:
@@ -111,59 +103,13 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
     """
     del since  # ponytail: full refresh; idempotent upsert makes re-runs safe
     cfg = get_ce_settings()
-    ids = _raw_ids(series_dict())
+    ids = referenced_ids(series_dict())
     n_batches = -(-len(ids) // _BATCH_IDS)
     log.info("ce: fetching %d raw series in %d batches", len(ids), n_batches)
     start, end = _HISTORY_START.isoformat(), dt.date.today().isoformat()
     return asyncio.run(_fetch_all(cfg, ids, start, end))
 
 
-def _compose(entries: list[dict[str, Any]], wide: pd.DataFrame) -> pd.DataFrame:
-    """Compose each dictionary entry from raw series: sum(positive) - sum(negative)."""
-    cols = ["date", "series_id", "name", "group", "sub_group", "area", "value", "source"]
-    have = set(wide.columns)
-    frames = []
-    for e in entries:
-        pos = e.get("positive") or []
-        neg = e.get("negative") or []
-        missing = [c for c in pos + neg if c not in have]
-        if missing:
-            log.warning("ce: %s missing raw ids %s; skipped", e["code"], missing)
-            continue
-        val = wide[pos].sum(axis=1, skipna=False) if pos else pd.Series(0.0, index=wide.index)
-        if neg:
-            val = val.sub(wide[neg].sum(axis=1, skipna=False))
-
-        if e.get("fillna") == "0":
-            val = val.fillna(0)
-
-        val = val.dropna()
-        if e.get("skip_last_day") and len(val):
-            val = val.iloc[:-1]  # legacy: last day often incomplete for these series
-        if val.empty:
-            continue
-        frames.append(
-            pd.DataFrame(
-                {
-                    "date": val.index,
-                    "series_id": e["code"],
-                    "name": e["name"],
-                    "group": e.get("group"),
-                    "sub_group": e.get("sub_group"),
-                    "area": e.get("area"),
-                    "value": val.to_numpy(),
-                    "source": source,
-                }
-            )
-        )
-
-    if not frames:
-        return pd.DataFrame(columns=cols)
-    df = pd.concat(frames, ignore_index=True)
-    df["date"] = pd.to_datetime(df["date"])
-    return df[cols]
-
-
 def to_canonical(raw: pd.DataFrame) -> pd.DataFrame:
     """Compose the canonical series from the wide raw frame, per `settings/ce.yaml`."""
-    return _compose(series_dict(), raw)
+    return compose(series_dict(), raw, source)

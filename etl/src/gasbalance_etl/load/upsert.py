@@ -39,6 +39,7 @@ def sync_series(
             "area": d.get("area"),
             "unit": d.get("unit", "mcm"),
             "source": source,
+            "is_derived": d.get("is_derived", False),
         }
         for d in dictionary
     ]
@@ -52,6 +53,7 @@ def sync_series(
             "area": ins.excluded.area,
             "unit": ins.excluded.unit,
             "source": ins.excluded.source,
+            "is_derived": ins.excluded.is_derived,
         },
     ).returning(Series.id, Series.code)
     return {code: id_ for id_, code in session.execute(stmt).all()}
