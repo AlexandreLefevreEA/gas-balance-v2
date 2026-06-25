@@ -34,6 +34,13 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     `etl/src/gasbalance_etl/settings/ce.yaml`. The first connector — it also bootstraps
     the shared CLI (`etl run <source>`), the load/upsert step, and the canonical Pandera
     schema, all kept source-agnostic. (ADR 0003.)
+  - **kpler_actual_temps** (Kpler) — hourly actual temperature (°C) per power zone, a
+    demand **covariate**. Kpler has no observed product, so "actual" = the day-ahead
+    (D-1) slice of each archived 00z EC_OP run (consistent back to ~2018). HTTP Basic
+    Auth, JSON; **incremental** (self-managed from the last loaded timestamp; first run
+    backfills). Hourly, so it lands in the `covariate` table — keyed by timestamp,
+    separate from the daily `observation` actuals — via the connector's `load` hook.
+    Areas map 1:1 to Kpler zones in `settings/kpler_actual_temps.yaml`. (ADR 0008.)
 - **ml/** — the data-science core. Reads clean series from Postgres, builds features
   (covariates), fits/backtests models from a registry, tracks experiments in MLflow,
   and writes forecasts back to Postgres. Models are config-selected, not hardcoded.

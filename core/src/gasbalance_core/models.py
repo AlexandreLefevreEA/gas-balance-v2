@@ -120,6 +120,32 @@ class Observation(Base):
     __table_args__ = (CheckConstraint(_FINITE, name="ck_observation_value_finite"),)
 
 
+class Covariate(Base):
+    """Exogenous sub-daily drivers (e.g. temperature) — separate from gas-balance actuals.
+
+    Like Observation but keyed by a full timestamp `(series_id, ts)`, so it holds the
+    24 hourly values/day that `observation` (daily) cannot. Connectors route here via a
+    `load` hook instead of the daily observation upsert. Upsert overwrites in place;
+    re-runs are idempotent. See ADR 0008.
+    """
+
+    __tablename__ = "covariate"
+
+    series_id: Mapped[int] = mapped_column(
+        ForeignKey(Series.id, name="fk_covariate_series"), primary_key=True
+    )
+    ts: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    value: Mapped[float] = mapped_column(Double, nullable=False)
+    run_id: Mapped[int | None] = mapped_column(
+        ForeignKey(EtlRun.run_id, name="fk_covariate_etl_run")
+    )
+    loaded_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (CheckConstraint(_FINITE, name="ck_covariate_value_finite"),)
+
+
 class Forecast(Base):
     """Forecasts — one vintage per made_on day; a new run overrides that day."""
 

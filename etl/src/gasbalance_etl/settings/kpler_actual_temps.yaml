@@ -1,0 +1,23 @@
+# Kpler actual temperatures — one series per balance area (covariate, °C).
+# Each entry maps a balance `area` to the Kpler `zone` we pull hourly D-0/00z/EC_OP
+# temps for. Today the map is identity (area code == zone code); it's explicit so a
+# split country (e.g. IT bidding zones) can be remapped without touching code.
+#   code   Series.code (unique).   group -> Series.category.   zone -> Kpler zone param.
+- {code: KP.TEMP.AT, name: AT Temperature, group: temperature, area: AT, zone: AT, unit: degC}
+- {code: KP.TEMP.BE, name: BE Temperature, group: temperature, area: BE, zone: BE, unit: degC}
+- {code: KP.TEMP.BG, name: BG Temperature, group: temperature, area: BG, zone: BG, unit: degC}
+- {code: KP.TEMP.CZ, name: CZ Temperature, group: temperature, area: CZ, zone: CZ, unit: degC}
+- {code: KP.TEMP.DE, name: DE Temperature, group: temperature, area: DE, zone: DE, unit: degC}
+- {code: KP.TEMP.DK, name: DK Temperature, group: temperature, area: DK, zone: DK, unit: degC}
+- {code: KP.TEMP.FR, name: FR Temperature, group: temperature, area: FR, zone: FR, unit: degC}
+- {code: KP.TEMP.GB, name: GB Temperature, group: temperature, area: GB, zone: GB, unit: degC}
+- {code: KP.TEMP.GR, name: GR Temperature, group: temperature, area: GR, zone: GR, unit: degC}
+- {code: KP.TEMP.HR, name: HR Temperature, group: temperature, area: HR, zone: HR, unit: degC}
+- {code: KP.TEMP.HU, name: HU Temperature, group: temperature, area: HU, zone: HU, unit: degC}
+- {code: KP.TEMP.IT, name: IT Temperature, group: temperature, area: IT, zone: IT, unit: degC}
+- {code: KP.TEMP.LT, name: LT Temperature, group: temperature, area: LT, zone: LT, unit: degC}
+- {code: KP.TEMP.NL, name: NL Temperature, group: temperature, area: NL, zone: NL, unit: degC}
+- {code: KP.TEMP.PL, name: PL Temperature, group: temperature, area: PL, zone: PL, unit: degC}
+- {code: KP.TEMP.RO, name: RO Temperature, group: temperature, area: RO, zone: RO, unit: degC}
+- {code: KP.TEMP.SI, name: SI Temperature, group: temperature, area: SI, zone: SI, unit: degC}
+- {code: KP.TEMP.SK, name: SK Temperature, group: temperature, area: SK, zone: SK, unit: degC}

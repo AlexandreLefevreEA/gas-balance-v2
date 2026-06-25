@@ -37,7 +37,10 @@ def _run_one(name: str, conn: Any) -> int:
         rows_in = len(df)
         conn.schema.validate(df, lazy=True)  # raises on bad data -> blocks the load
         code_to_id = sync_series(session, conn.series_dict(), name)
-        loaded = upsert_observations(session, df, run.run_id, code_to_id)
+        # Connectors may declare their own sink (e.g. hourly covariates); default is
+        # the daily observation upsert. See ADR 0008.
+        load_fn = getattr(conn, "load", upsert_observations)
+        loaded = load_fn(session, df, run.run_id, code_to_id)
         run.status = "success"
         run.rows_in = rows_in
         run.rows_loaded = loaded
