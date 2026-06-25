@@ -1,0 +1,2 @@
+# gasbalance_core package root. Implementation adds __init__.py + modules
+# (config.py, db.py, logging.py, types.py, settings loader).

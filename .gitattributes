@@ -1,0 +1,12 @@
+* text=auto eol=lf
+*.py   text eol=lf
+*.md   text eol=lf
+*.sh   text eol=lf
+*.ps1  text eol=crlf
+*.bat  text eol=crlf
+
+# Generated lockfiles: don't diff, mark as generated in stats
+uv.lock           linguist-generated=true -diff
+package-lock.json linguist-generated=true -diff
+
+*.ipynb linguist-language=Python

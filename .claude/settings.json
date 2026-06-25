@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./**/.venv/**)",
+      "Read(./**/venv/**)",
+      "Read(./**/node_modules/**)",
+      "Read(./**/__pycache__/**)",
+      "Read(./**/mlruns/**)",
+      "Read(./**/data/**)",
+      "Read(./legacy/**)"
+    ],
+    "allow": [
+      "Bash(uv run pytest:*)",
+      "Bash(uv run ruff:*)",
+      "Bash(uv run mypy:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ]
+  }
+}

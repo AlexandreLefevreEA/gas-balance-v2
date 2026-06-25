@@ -1,0 +1,27 @@
+# Workspace root. Not a package itself — it declares the uv workspace and holds
+# the shared tool config (ruff / mypy / pytest) for every Python member.
+[project]
+name = "gas-balance-v2"
+version = "0.0.0"
+description = "EU gas balance forecasting — monorepo (etl · ml · api), shared core."
+requires-python = ">=3.12"
+
+[tool.uv.workspace]
+members = ["core", "etl", "ml", "api"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["core/src", "etl/src", "ml/src", "api/src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["core/src", "etl/src", "ml/src", "api/src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["core/tests", "etl/tests", "ml/tests", "api/tests"]

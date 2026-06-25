@@ -1,0 +1,36 @@
+# Local dev stack. `make dev` runs this. Postgres is real; api/web build once those
+# services have source. Secrets come from the repo-root .env (git-ignored).
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${DB_USER:-gasbalance}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-gasbalance}
+      POSTGRES_DB: ${DB_NAME:-gas_balance}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-gasbalance}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Uncomment once the services have source + Dockerfiles are fleshed out.
+  # api:
+  #   build: { context: .., dockerfile: infra/Dockerfile.api }
+  #   env_file: ../.env
+  #   ports: ["8000:8000"]
+  #   depends_on:
+  #     postgres: { condition: service_healthy }
+  #
+  # web:
+  #   build: { context: ../web }
+  #   environment:
+  #     VITE_API_BASE_URL: http://localhost:8000
+  #   ports: ["5173:5173"]
+  #   depends_on: [api]
+
+volumes:
+  pgdata:

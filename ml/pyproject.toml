@@ -1,0 +1,23 @@
+# Scaffold — add src/gasbalance_ml/__init__.py, the `ml` CLI, and deps during implementation.
+[project]
+name = "gasbalance-ml"
+version = "0.0.0"
+description = "Forecasting core: model registry, features, backtesting, tuning, MLflow experiments."
+requires-python = ">=3.12"
+dependencies = [
+  "gasbalance-core",
+  # e.g. darts, scikit-learn, optuna, mlflow, pandas — added when implemented
+]
+
+# [project.scripts]
+# ml = "gasbalance_ml.cli:main"   # uncomment when cli.py exists
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gasbalance_ml"]
+
+[tool.uv.sources]
+gasbalance-core = { workspace = true }

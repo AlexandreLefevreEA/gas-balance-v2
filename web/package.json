@@ -1,0 +1,14 @@
+{
+  "name": "gas-balance-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "React + Vite dashboard for Gas Balance v2 (scaffold — generate with `npm create vite`).",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "test": "vitest"
+  }
+}

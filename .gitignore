@@ -1,0 +1,54 @@
+# --- Secrets / env ---
+.env
+.env.*
+!.env.example
+
+# --- Legacy v1: contains plaintext secrets; excluded from VCS until scrubbed + rotated.
+#     Keep only its CLAUDE.md so the repo documents why it's excluded.
+/legacy/*
+!/legacy/CLAUDE.md
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.uv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.ipynb_checkpoints/
+
+# --- Data / artifacts (trusted data lives in Postgres, not git) ---
+data/
+*.pkl
+*.parquet
+*.xlsx
+*.xls
+*.csv
+!**/fixtures/**/*.csv
+
+# --- ML experiment tracking ---
+mlruns/
+mlartifacts/
+optuna.db
+*.optuna
+
+# --- Node / web ---
+node_modules/
+web/dist/
+.vite/
+*.local
+
+# --- Editors / OS ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
