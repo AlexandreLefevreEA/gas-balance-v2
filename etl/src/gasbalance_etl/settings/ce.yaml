@@ -1,0 +1,2067 @@
+# Commodity Essentials — curated series dictionary (ported from legacy eu_balance.yaml).
+# Each entry = one v2 series, composed from raw CE seriesIds: value = sum(positive) -
+# sum(negative), aligned by date (skipna=False). Look ids up via eugasmeta?id=series.
+#   code      Series.code (unique). ce_id refs in positive/negative are CE seriesIds.
+#   group -> Series.category. Removing a line stops new writes; history is kept.
+- code: CE.39
+  name: HR Prod
+  group: production
+  sub_group: null
+  area: HR
+  unit: mcm
+  positive:
+  - '55306'
+  negative: []
+- code: CE.47.2
+  name: HR LNG
+  group: lng
+  sub_group: null
+  area: HR
+  unit: mcm
+  positive:
+  - '55357'
+  negative: []
+- code: CE.78.04
+  name: HR Demand
+  group: demand
+  sub_group: null
+  area: HR
+  unit: mcm
+  positive:
+  - '55316'
+  negative: []
+- code: CE.97.4
+  name: HR Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: HR
+  unit: mcm
+  positive: []
+  negative:
+  - '55259'
+- code: CE.116.03
+  name: HR Storage Level
+  group: storage
+  sub_group: level
+  area: HR
+  unit: mcm
+  positive:
+  - '55258'
+  negative: []
+- code: CE.131.03
+  name: HR Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: HR
+  unit: mcm
+  positive:
+  - '55262'
+  negative: []
+- code: CE.156.02
+  name: HR LNG Level
+  group: lng
+  sub_group: level
+  area: HR
+  unit: mcm
+  positive:
+  - '55356'
+  negative: []
+- code: CE.165.02
+  name: HR LNG Capacity
+  group: lng
+  sub_group: capacity
+  area: HR
+  unit: mcm
+  positive:
+  - '55361'
+  negative: []
+- code: CE.52.1
+  name: HR CE Imbalance
+  group: supply
+  sub_group: null
+  area: HR
+  unit: mcm
+  positive: []
+  negative:
+  - '55255'
+- code: CE.36
+  name: HU Prod
+  group: production
+  sub_group: null
+  area: HU
+  unit: mcm
+  positive:
+  - '33623'
+  negative: []
+- code: CE.78.05
+  name: HU Demand
+  group: demand
+  sub_group: null
+  area: HU
+  unit: mcm
+  positive:
+  - '33745'
+  negative: []
+- code: CE.97.5
+  name: HU Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: HU
+  unit: mcm
+  positive: []
+  negative:
+  - '33633'
+- code: CE.112
+  name: HU Storage Level
+  group: storage
+  sub_group: level
+  area: HU
+  unit: mcm
+  positive:
+  - '33630'
+  negative: []
+- code: CE.127
+  name: HU Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: HU
+  unit: mcm
+  positive:
+  - '33632'
+  negative: []
+- code: CE.52.11
+  name: HU CE Imbalance
+  group: supply
+  sub_group: null
+  area: HU
+  unit: mcm
+  positive: []
+  negative:
+  - '33650'
+- code: CE.22
+  name: Gela
+  group: pipeline
+  sub_group: null
+  area: IT
+  unit: mcm
+  positive:
+  - '25179'
+  negative: []
+- code: CE.23
+  name: Mazara
+  group: pipeline
+  sub_group: null
+  area: IT
+  unit: mcm
+  positive:
+  - '25189'
+  negative: []
+- code: CE.33
+  name: IT Prod
+  group: production
+  sub_group: null
+  area: IT
+  unit: mcm
+  positive:
+  - '25338'
+  negative: []
+- code: CE.48
+  name: IT LNG
+  group: lng
+  sub_group: null
+  area: IT
+  unit: mcm
+  positive: []
+  negative:
+  - '42930'
+- code: CE.80
+  name: IT LDZ
+  group: demand
+  sub_group: null
+  area: IT
+  unit: mcm
+  positive:
+  - '25316'
+  negative: []
+- code: CE.81
+  name: IT IND
+  group: demand
+  sub_group: null
+  area: IT
+  unit: mcm
+  positive:
+  - '25303'
+  - '28896'
+  negative: []
+- code: CE.82
+  name: IT GTP
+  group: demand
+  sub_group: null
+  area: IT
+  unit: mcm
+  positive:
+  - '25308'
+  negative: []
+- code: CE.96
+  name: IT Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: IT
+  unit: mcm
+  positive: []
+  negative:
+  - '25356'
+- code: CE.105
+  name: IT Storage Level
+  group: storage
+  sub_group: level
+  area: IT
+  unit: mcm
+  positive:
+  - '25285'
+  - '40096'
+  - '25241'
+  negative: []
+- code: CE.120
+  name: IT Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: IT
+  unit: mcm
+  positive:
+  - '29020'
+  - '40128'
+  - '29120'
+  - '60037'
+  negative: []
+- code: CE.155
+  name: IT LNG Level
+  group: lng
+  sub_group: level
+  area: IT
+  unit: mcm
+  positive:
+  - '25344'
+  negative: []
+- code: CE.164
+  name: IT LNG capacity
+  group: lng
+  sub_group: capacity
+  area: IT
+  unit: mcm
+  positive:
+  - '29024'
+  negative: []
+- code: CE.51.7
+  name: IT Linepack
+  group: supply
+  sub_group: null
+  area: IT
+  unit: mcm
+  positive: []
+  negative:
+  - '40221'
+- code: CE.52.12
+  name: IT CE Imbalance
+  group: supply
+  sub_group: null
+  area: IT
+  unit: mcm
+  positive: []
+  negative:
+  - '29197'
+- code: CE.156.03
+  name: LT LNG Level
+  group: lng
+  sub_group: level
+  area: LT
+  unit: mcm
+  positive:
+  - '45559'
+  negative: []
+- code: CE.165.03
+  name: LT LNG Capacity
+  group: lng
+  sub_group: capacity
+  area: LT
+  unit: mcm
+  positive:
+  - '45567'
+  negative: []
+- code: CE.52.13
+  name: LT CE Imbalance
+  group: supply
+  sub_group: null
+  area: LT
+  unit: mcm
+  positive: []
+  negative:
+  - '45660'
+- code: CE.13
+  name: NL Pipeline
+  group: pipeline
+  sub_group: null
+  area: NL
+  unit: mcm
+  positive: []
+  negative:
+  - '23865'
+- code: CE.29
+  name: NL Prod
+  group: production
+  sub_group: null
+  area: NL
+  unit: mcm
+  positive:
+  - '18827'
+  negative: []
+- code: CE.45
+  name: NL LNG
+  group: lng
+  sub_group: null
+  area: NL
+  unit: mcm
+  positive: []
+  negative:
+  - '45034'
+- code: CE.66
+  name: NL LDZ
+  group: demand
+  sub_group: null
+  area: NL
+  unit: mcm
+  positive:
+  - '18801'
+  negative: []
+- code: CE.67
+  name: NL IND
+  group: demand
+  sub_group: null
+  area: NL
+  unit: mcm
+  positive:
+  - '18804'
+  negative:
+  - '40998'
+  skip_last_day: true
+- code: CE.68
+  name: NL GTP
+  group: demand
+  sub_group: null
+  area: NL
+  unit: mcm
+  positive:
+  - '40998'
+  negative: []
+- code: CE.92
+  name: NL Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: NL
+  unit: mcm
+  positive: []
+  negative:
+  - '23634'
+- code: CE.107
+  name: NL Storage Level
+  group: storage
+  sub_group: level
+  area: NL
+  unit: mcm
+  positive:
+  - '18987'
+  negative: []
+- code: CE.122
+  name: NL Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: NL
+  unit: mcm
+  positive:
+  - '29092'
+  negative: []
+- code: CE.152
+  name: NL LNG Level
+  group: lng
+  sub_group: level
+  area: NL
+  unit: mcm
+  positive:
+  - '18839'
+  negative: []
+- code: CE.161
+  name: NL LNG Capacity
+  group: lng
+  sub_group: capacity
+  area: NL
+  unit: mcm
+  positive:
+  - '29054'
+  negative: []
+- code: CE.52.14
+  name: NL CE Imbalance
+  group: supply
+  sub_group: null
+  area: NL
+  unit: mcm
+  positive: []
+  negative:
+  - '29199'
+- code: CE.34
+  name: PL Prod
+  group: production
+  sub_group: null
+  area: PL
+  unit: mcm
+  positive:
+  - '28439'
+  negative: []
+- code: CE.47
+  name: PL LNG
+  group: lng
+  sub_group: null
+  area: PL
+  unit: mcm
+  positive:
+  - '28237'
+  negative: []
+- code: CE.78.06
+  name: PL Demand
+  group: demand
+  sub_group: null
+  area: PL
+  unit: mcm
+  positive:
+  - '29139'
+  negative: []
+- code: CE.97.7
+  name: PL Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: PL
+  unit: mcm
+  positive: []
+  negative:
+  - '28455'
+- code: CE.115
+  name: PL Storage Level
+  group: storage
+  sub_group: level
+  area: PL
+  unit: mcm
+  positive:
+  - '28454'
+  negative: []
+- code: CE.130
+  name: PL Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: PL
+  unit: mcm
+  positive:
+  - '29040'
+  negative: []
+- code: CE.156.04
+  name: PL LNG Level
+  group: lng
+  sub_group: level
+  area: PL
+  unit: mcm
+  positive:
+  - '28438'
+  negative: []
+- code: CE.165.04
+  name: PL LNG Capacity
+  group: lng
+  sub_group: capacity
+  area: PL
+  unit: mcm
+  positive:
+  - '29039'
+  negative: []
+- code: CE.52.15
+  name: PL CE Imbalance
+  group: supply
+  sub_group: null
+  area: PL
+  unit: mcm
+  positive: []
+  negative:
+  - '29201'
+- code: CE.31
+  name: RO Prod
+  group: production
+  sub_group: null
+  area: RO
+  unit: mcm
+  positive:
+  - '42424'
+  negative: []
+- code: CE.78.07
+  name: RO Demand
+  group: demand
+  sub_group: null
+  area: RO
+  unit: mcm
+  positive:
+  - '42444'
+  negative: []
+- code: CE.97.8
+  name: RO Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: RO
+  unit: mcm
+  positive: []
+  negative:
+  - '42438'
+- code: CE.116
+  name: RO Storage Level
+  group: storage
+  sub_group: level
+  area: RO
+  unit: mcm
+  positive:
+  - '42437'
+  negative: []
+- code: CE.131
+  name: RO Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: RO
+  unit: mcm
+  positive:
+  - '42722'
+  negative: []
+- code: CE.51.8
+  name: RO Linepack
+  group: supply
+  sub_group: null
+  area: RO
+  unit: mcm
+  positive: []
+  negative:
+  - '42550'
+- code: CE.52.16
+  name: RO CE Imbalance
+  group: supply
+  sub_group: null
+  area: RO
+  unit: mcm
+  positive: []
+  negative:
+  - '42443'
+- code: CE.78.08
+  name: SI Demand
+  group: demand
+  sub_group: null
+  area: SI
+  unit: mcm
+  positive:
+  - '58634'
+  negative: []
+- code: CE.52.17
+  name: SI CE Imbalance
+  group: supply
+  sub_group: null
+  area: SI
+  unit: mcm
+  positive: []
+  negative:
+  - '58623'
+- code: CE.78.09
+  name: SK Demand
+  group: demand
+  sub_group: null
+  area: SK
+  unit: mcm
+  positive:
+  - '26236'
+  negative: []
+- code: CE.97.9
+  name: SK Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: SK
+  unit: mcm
+  positive: []
+  negative:
+  - '26242'
+- code: CE.114
+  name: SK Storage Level
+  group: storage
+  sub_group: level
+  area: SK
+  unit: mcm
+  positive:
+  - '26241'
+  negative: []
+- code: CE.129
+  name: SK Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: SK
+  unit: mcm
+  positive:
+  - '29098'
+  negative: []
+- code: CE.52.18
+  name: SK CE Imbalance
+  group: supply
+  sub_group: null
+  area: SK
+  unit: mcm
+  positive: []
+  negative:
+  - '29202'
+- code: CE.74.1
+  name: AT Lindau LDZ
+  group: demand
+  sub_group: null
+  area: AT
+  unit: mcm
+  positive:
+  - '25789'
+  negative: []
+  fillna: '0'
+- code: CE.74.2
+  name: AT East LDZ
+  group: demand
+  sub_group: null
+  area: AT
+  unit: mcm
+  positive:
+  - '62270'
+  negative: []
+  fillna: '0'
+- code: CE.74.3
+  name: AT T&V LDZ
+  group: demand
+  sub_group: null
+  area: AT
+  unit: mcm
+  positive:
+  - '62276'
+  negative: []
+  fillna: '0'
+- code: CE.74.4
+  name: AT Vorarlberg LDZ
+  group: demand
+  sub_group: null
+  area: AT
+  unit: mcm
+  positive:
+  - '25662'
+  negative: []
+  fillna: '0'
+- code: CE.74
+  name: AT LDZ
+  group: demand
+  sub_group: null
+  area: AT
+  unit: mcm
+  positive:
+  - '25789'
+  - '62270'
+  - '62276'
+  - '25662'
+  negative: []
+  fillna: '0'
+  skip_last_day: true
+- code: CE.74.5
+  name: AT IND
+  group: demand
+  sub_group: null
+  area: AT
+  unit: mcm
+  positive:
+  - '62287'
+  - '62285'
+  negative: []
+  fillna: '0'
+- code: CE.74.5.1
+  name: AT East IND
+  group: demand
+  sub_group: null
+  area: AT
+  unit: mcm
+  positive:
+  - '62287'
+  negative: []
+  fillna: '0'
+- code: CE.74.52
+  name: AT T&V IND
+  group: demand
+  sub_group: null
+  area: AT
+  unit: mcm
+  positive:
+  - '62285'
+  negative: []
+  fillna: '0'
+- code: CE.75
+  name: AT GTP
+  group: demand
+  sub_group: null
+  area: AT
+  unit: mcm
+  positive:
+  - '62271'
+  negative: []
+  fillna: '0'
+- code: CE.75.1
+  name: AT CE Demand
+  group: demand
+  sub_group: null
+  area: AT
+  unit: mcm
+  positive:
+  - '25678'
+  negative: []
+  fillna: '0'
+- code: CE.38
+  name: AT Prod
+  group: production
+  sub_group: null
+  area: AT
+  unit: mcm
+  positive:
+  - '25681'
+  negative: []
+- code: CE.94
+  name: AT Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: AT
+  unit: mcm
+  positive: []
+  negative:
+  - '25687'
+- code: CE.108
+  name: AT Storage Level
+  group: storage
+  sub_group: level
+  area: AT
+  unit: mcm
+  positive:
+  - '25686'
+  negative: []
+- code: CE.123
+  name: AT Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: AT
+  unit: mcm
+  positive:
+  - '29036'
+  negative: []
+- code: CE.52.01
+  name: AT CE Imbalance
+  group: supply
+  sub_group: null
+  area: AT
+  unit: mcm
+  positive: []
+  negative:
+  - '29186'
+- code: CE.15
+  name: BE Pipeline
+  group: pipeline
+  sub_group: null
+  area: BE
+  unit: mcm
+  positive: []
+  negative:
+  - '23857'
+- code: CE.46
+  name: BE LNG
+  group: lng
+  sub_group: null
+  area: BE
+  unit: mcm
+  positive: []
+  negative:
+  - '43431'
+- code: CE.70
+  name: BE LDZ
+  group: demand
+  sub_group: null
+  area: BE
+  unit: mcm
+  positive:
+  - '20786'
+  negative: []
+- code: CE.71
+  name: BE IND
+  group: demand
+  sub_group: null
+  area: BE
+  unit: mcm
+  positive:
+  - '20792'
+  negative: []
+- code: CE.72
+  name: BE GTP
+  group: demand
+  sub_group: null
+  area: BE
+  unit: mcm
+  positive:
+  - '20795'
+  negative: []
+- code: CE.93
+  name: BE Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: BE
+  unit: mcm
+  positive: []
+  negative:
+  - '23405'
+- code: CE.111
+  name: BE Storage Level
+  group: storage
+  sub_group: level
+  area: BE
+  unit: mcm
+  positive:
+  - '20906'
+  negative: []
+- code: CE.126
+  name: BE Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: BE
+  unit: mcm
+  positive:
+  - '29103'
+  negative: []
+- code: CE.153
+  name: BE LNG level
+  group: lng
+  sub_group: level
+  area: BE
+  unit: mcm
+  positive:
+  - '20884'
+  negative: []
+- code: CE.162
+  name: BE LNG Capacity
+  group: lng
+  sub_group: capacity
+  area: BE
+  unit: mcm
+  positive:
+  - '29055'
+  negative: []
+- code: CE.52.02
+  name: BE CE Imbalance
+  group: supply
+  sub_group: null
+  area: BE
+  unit: mcm
+  positive: []
+  negative:
+  - '29187'
+- code: CE.78.02
+  name: BG Demand
+  group: demand
+  sub_group: null
+  area: BG
+  unit: mcm
+  positive:
+  - '49882'
+  negative: []
+- code: CE.97.1
+  name: BG Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: BG
+  unit: mcm
+  positive: []
+  negative:
+  - '45600'
+- code: CE.116.01
+  name: BG Storage Level
+  group: storage
+  sub_group: level
+  area: BG
+  unit: mcm
+  positive:
+  - '45597'
+  negative: []
+- code: CE.131.01
+  name: BG Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: BG
+  unit: mcm
+  positive:
+  - '45599'
+  negative: []
+- code: CE.51.1
+  name: BG Linepack
+  group: supply
+  sub_group: null
+  area: BG
+  unit: mcm
+  positive: []
+  negative:
+  - '50036'
+- code: CE.52.03
+  name: BG CE Imbalance
+  group: supply
+  sub_group: null
+  area: BG
+  unit: mcm
+  positive: []
+  negative:
+  - '45661'
+- code: CE.3.1
+  name: BG Prod
+  group: production
+  sub_group: null
+  area: BG
+  unit: mcm
+  positive:
+  - '49769'
+  negative: []
+- code: CE.78.01
+  name: CZ Demand
+  group: demand
+  sub_group: null
+  area: CZ
+  unit: mcm
+  positive:
+  - '26107'
+  negative: []
+- code: CE.97.2
+  name: CZ Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: CZ
+  unit: mcm
+  positive: []
+  negative:
+  - '26113'
+- code: CE.113
+  name: CZ Storage Level
+  group: storage
+  sub_group: level
+  area: CZ
+  unit: mcm
+  positive:
+  - '26112'
+  negative: []
+- code: CE.128
+  name: CZ Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: CZ
+  unit: mcm
+  positive:
+  - '29082'
+  negative: []
+- code: CE.51.2
+  name: CZ Linepack
+  group: supply
+  sub_group: null
+  area: CZ
+  unit: mcm
+  positive: []
+  negative:
+  - '40070'
+- code: CE.52.04
+  name: CZ CE Imbalance
+  group: supply
+  sub_group: null
+  area: CZ
+  unit: mcm
+  positive: []
+  negative:
+  - '29189'
+- code: CE.12
+  name: DE Pipeline
+  group: pipeline
+  sub_group: null
+  area: DE
+  unit: mcm
+  positive: []
+  negative:
+  - '23862'
+- code: CE.32
+  name: DE Prod
+  group: production
+  sub_group: null
+  area: DE
+  unit: mcm
+  positive:
+  - '20935'
+  negative: []
+- code: CE.42
+  name: DE LNG
+  group: lng
+  sub_group: null
+  area: DE
+  unit: mcm
+  positive: []
+  negative:
+  - '60795'
+- code: CE.54
+  name: DE LDZ
+  group: demand
+  sub_group: null
+  area: DE
+  unit: mcm
+  positive:
+  - '57744'
+  - '57748'
+  negative: []
+- code: CE.55
+  name: DE IND
+  group: demand
+  sub_group: null
+  area: DE
+  unit: mcm
+  positive:
+  - '57746'
+  - '57745'
+  negative:
+  - '40890'
+- code: CE.56
+  name: DE GTP
+  group: demand
+  sub_group: null
+  area: DE
+  unit: mcm
+  positive:
+  - '40890'
+  negative: []
+- code: CE.89
+  name: DE Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: DE
+  unit: mcm
+  positive: []
+  negative:
+  - '23681'
+  - '24282'
+  - '24289'
+- code: CE.104
+  name: DE Storage Level
+  group: storage
+  sub_group: level
+  area: DE
+  unit: mcm
+  positive:
+  - '21390'
+  negative:
+  - '21346'
+  - '21355'
+- code: CE.119
+  name: DE Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: DE
+  unit: mcm
+  positive:
+  - '29118'
+  negative:
+  - '29078'
+  - '29130'
+- code: CE.149
+  name: DE LNG Level
+  group: lng
+  sub_group: level
+  area: DE
+  unit: mcm
+  positive:
+  - '60794'
+  negative: []
+- code: CE.158
+  name: DE LNG capacity
+  group: lng
+  sub_group: capacity
+  area: DE
+  unit: mcm
+  positive:
+  - '60825'
+  negative: []
+- code: CE.51.3
+  name: DE Linepack
+  group: supply
+  sub_group: null
+  area: DE
+  unit: mcm
+  positive: []
+  negative:
+  - '55057'
+- code: CE.52.05
+  name: DE CE Imbalance
+  group: supply
+  sub_group: null
+  area: DE
+  unit: mcm
+  positive: []
+  negative:
+  - '29190'
+- code: CE.17
+  name: DK Pipeline
+  group: pipeline
+  sub_group: null
+  area: DK
+  unit: mcm
+  positive: []
+  negative:
+  - '60328'
+- code: CE.97.3
+  name: DK Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: DK
+  unit: mcm
+  positive: []
+  negative:
+  - '27871'
+- code: CE.116.02
+  name: DK Storage Level
+  group: storage
+  sub_group: level
+  area: DK
+  unit: mcm
+  positive:
+  - '27870'
+  negative: []
+- code: CE.131.02
+  name: DK Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: DK
+  unit: mcm
+  positive:
+  - '29094'
+  negative: []
+- code: CE.52.06
+  name: DK CE Imbalance
+  group: supply
+  sub_group: null
+  area: DK
+  unit: mcm
+  positive: []
+  negative:
+  - '29191'
+- code: CE.6.1
+  name: DK Nybro Prod
+  group: production
+  sub_group: null
+  area: DK
+  unit: mcm
+  positive: []
+  negative:
+  - '27845'
+- code: CE.6.2
+  name: DK Biogas Prod
+  group: production
+  sub_group: null
+  area: DK
+  unit: mcm
+  positive: []
+  negative:
+  - '27853'
+- code: CE.14
+  name: FR Pipeline
+  group: pipeline
+  sub_group: null
+  area: FR
+  unit: mcm
+  positive: []
+  negative:
+  - '23854'
+- code: CE.40
+  name: FR Prod
+  group: production
+  sub_group: null
+  area: FR
+  unit: mcm
+  positive:
+  - '63094'
+  negative: []
+- code: CE.44
+  name: FR LNG
+  group: lng
+  sub_group: null
+  area: FR
+  unit: mcm
+  positive: []
+  negative:
+  - '43741'
+- code: CE.62
+  name: FR LDZ
+  group: demand
+  sub_group: null
+  area: FR
+  unit: mcm
+  positive:
+  - '19924'
+  negative: []
+- code: CE.63
+  name: FR IND
+  group: demand
+  sub_group: null
+  area: FR
+  unit: mcm
+  positive:
+  - '19909'
+  negative: []
+- code: CE.64
+  name: FR GTP
+  group: demand
+  sub_group: null
+  area: FR
+  unit: mcm
+  positive:
+  - '19903'
+  negative: []
+- code: CE.91
+  name: FR Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: FR
+  unit: mcm
+  positive: []
+  negative:
+  - '23272'
+- code: CE.106
+  name: FR Storage Level
+  group: storage
+  sub_group: level
+  area: FR
+  unit: mcm
+  positive:
+  - '20109'
+  negative: []
+- code: CE.121
+  name: FR Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: FR
+  unit: mcm
+  positive:
+  - '29067'
+  negative: []
+- code: CE.151
+  name: FR LNG Level
+  group: lng
+  sub_group: level
+  area: FR
+  unit: mcm
+  positive:
+  - '20037'
+  negative: []
+- code: CE.160
+  name: FR LNG Capacity
+  group: lng
+  sub_group: capacity
+  area: FR
+  unit: mcm
+  positive:
+  - '29053'
+  negative: []
+- code: CE.51.4
+  name: FR Linepack
+  group: supply
+  sub_group: null
+  area: FR
+  unit: mcm
+  positive: []
+  negative:
+  - '50454'
+- code: CE.52.07
+  name: FR CE Imbalance
+  group: supply
+  sub_group: null
+  area: FR
+  unit: mcm
+  positive: []
+  negative:
+  - '29193'
+- code: CE.16
+  name: GB Pipeline
+  group: pipeline
+  sub_group: null
+  area: GB
+  unit: mcm
+  positive:
+  - '23085'
+  - '23086'
+  - '23080'
+  negative: []
+- code: CE.30
+  name: GB Prod
+  group: production
+  sub_group: null
+  area: GB
+  unit: mcm
+  positive:
+  - '19425'
+  negative: []
+- code: CE.43
+  name: GB LNG
+  group: lng
+  sub_group: null
+  area: GB
+  unit: mcm
+  positive: []
+  negative:
+  - '43437'
+- code: CE.58
+  name: GB LDZ
+  group: demand
+  sub_group: null
+  area: GB
+  unit: mcm
+  positive:
+  - '18881'
+  negative: []
+- code: CE.59
+  name: GB IND
+  group: demand
+  sub_group: null
+  area: GB
+  unit: mcm
+  positive:
+  - '18903'
+  negative: []
+- code: CE.60
+  name: GB GTP
+  group: demand
+  sub_group: null
+  area: GB
+  unit: mcm
+  positive:
+  - '18946'
+  negative: []
+- code: CE.90
+  name: GB Storage Withdrawal
+  group: storage
+  sub_group: withdrawal
+  area: GB
+  unit: mcm
+  positive: []
+  negative:
+  - '23380'
+- code: CE.110
+  name: GB Storage Level
+  group: storage
+  sub_group: level
+  area: GB
+  unit: mcm
+  positive:
+  - '19590'
+  negative: []
+- code: CE.125
+  name: GB Storage Capacity
+  group: storage
+  sub_group: capacity
+  area: GB
+  unit: mcm
+  positive:
+  - '29005'
+  - '29006'
+  - '29023'
+  - '29010'
+  - '29012'
+  - '29013'
+  - '29014'
+  - '29016'
+  - '29019'
+  - '29017'
+  negative: []
+- code: CE.150
+  name: GB LNG Level
+  group: lng
+  sub_group: level
+  area: GB
+  unit: mcm
+  positive:
+  - '19516'
+  negative: []
+- code: CE.159
+  name: GB LNG Capacity
+  group: lng
+  sub_group: capacity
+  area: GB
+  unit: mcm
+  positive:
+  - '28960'
+  negative: []
+- code: CE.51.5
+  name: GB Linepack
+  group: supply
+  sub_group: null
+  area: GB
+  unit: mcm
+  positive: []
+  negative:
+  - '40216'
+- code: CE.52.08
+  name: GB CE Imbalance
+  group: supply
+  sub_group: null
+  area: GB
+  unit: mcm
+  positive: []
+  negative:
+  - '29185'
+- code: CE.47.1
+  name: GR LNG
+  group: lng
+  sub_group: null
+  area: GR
+  unit: mcm
+  positive:
+  - '45555'
+  negative: []
+- code: CE.78.03
+  name: GR Demand
+  group: demand
+  sub_group: null
+  area: GR
+  unit: mcm
+  positive:
+  - '51629'
+  negative: []
+- code: CE.156.01
+  name: GR LNG Level
+  group: lng
+  sub_group: level
+  area: GR
+  unit: mcm
+  positive:
+  - '45556'
+  negative: []
+- code: CE.165.01
+  name: GR LNG Capacity
+  group: lng
+  sub_group: capacity
+  area: GR
+  unit: mcm
+  positive:
+  - '45564'
+  negative: []
+- code: CE.51.6
+  name: GR Linepack
+  group: supply
+  sub_group: null
+  area: GR
+  unit: mcm
+  positive: []
+  negative:
+  - '51668'
+- code: CE.52.09
+  name: GR CE Imbalance
+  group: supply
+  sub_group: null
+  area: GR
+  unit: mcm
+  positive: []
+  negative:
+  - '45659'
+- code: CE.6
+  name: Turk Stream (Malkoclar)
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '49944'
+  negative: []
+- code: CE.6.5
+  name: Azeri (Kipoi,Kipi)
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '50713'
+- code: CE.6.6
+  name: Faxe
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '60256'
+- code: CE.7
+  name: Moffat
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '23110'
+- code: CE.8.1
+  name: Mosonmagyrovar
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '25581'
+- code: CE.8.2
+  name: Murfeld
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '25591'
+- code: CE.8.3
+  name: Lab4
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '25924'
+- code: CE.8.35
+  name: Baumgarten
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '25527'
+  negative: []
+- code: CE.8.4
+  name: Gorizia
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '25165'
+- code: CE.8.5
+  name: CH Border Flows
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '25810'
+- code: CE.8.55
+  name: LU Border Flows
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '25869'
+- code: CE.8.6
+  name: Pirineos
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '23317'
+- code: CE.8.7
+  name: Waidhaus
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '23761'
+  negative: []
+- code: CE.8.8
+  name: Brandov
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '49383'
+- code: CE.8.9
+  name: Ellund
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '24374'
+  negative: []
+- code: CE.8.91
+  name: GCP
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '24411'
+  negative: []
+- code: CE.8.92
+  name: Mallnow
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '24403'
+  negative: []
+- code: CE.8.93
+  name: HSK
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '23758'
+- code: CE.7.01
+  name: Santaka
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '59626'
+- code: CE.7.02
+  name: Cesky
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '25933'
+- code: CE.7.03
+  name: Vyrava
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '59804'
+- code: CE.7.06
+  name: Velke Zlievce
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '26180'
+- code: CE.7.07
+  name: Lanzhot
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '25948'
+  negative: []
+- code: CE.7.08
+  name: SPP
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '25963'
+- code: CE.7.1
+  name: Dravaszerdahely
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '33572'
+  negative: []
+- code: CE.7.11
+  name: Csanadpalota
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '33827'
+  negative: []
+- code: CE.7.12
+  name: Kiskundorozsma
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '33561'
+  negative: []
+- code: CE.7.13
+  name: Kiskundorozsma 2
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '57864'
+  negative: []
+- code: CE.7.15
+  name: Rogatec
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '55070'
+  negative: []
+- code: CE.7.16
+  name: Ruse
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '42202'
+  negative: []
+- code: CE.7.17
+  name: Negru Voda
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '42233'
+  negative: []
+- code: CE.7.21
+  name: Kulata
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '49768'
+  negative: []
+- code: CE.7.22
+  name: Kyustendil
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '49763'
+  negative: []
+- code: CE.7.24
+  name: RS Border Flows
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '61254'
+- code: CE.7.25
+  name: IGB
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '60157'
+  negative: []
+- code: CE.7.26
+  name: Trestenik
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '54940'
+  negative: []
+- code: CE.27
+  name: Azeri (Melendugno)
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '54684'
+  negative: []
+- code: CE.99.1
+  name: IBS Kalotina
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '62104'
+  negative: []
+- code: CE.99.2
+  name: Kireevo Zaychar
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '55414'
+  negative: []
+- code: CE.99.3
+  name: DE to AT
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '25706'
+  negative: []
+- code: CE.99.4
+  name: IT to AT
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '25709'
+  negative: []
+- code: CE.99.5
+  name: FR to DE
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '23691'
+  negative: []
+- code: CE.99.6
+  name: NL to DE
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '23693'
+  negative: []
+- code: CE.99.8
+  name: CH to DE
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '23699'
+  negative: []
+- code: CE.99.9
+  name: LU to DE
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '23700'
+  negative: []
+- code: CE.99.91
+  name: BE to DE
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '23701'
+  negative: []
+- code: CE.99.92
+  name: BE to FR
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '23311'
+  negative: []
+- code: CE.99.93
+  name: CH to FR
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '23314'
+  negative: []
+- code: CE.99.94
+  name: BE to GB
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '23166'
+  negative: []
+- code: CE.99.95
+  name: NL to GB
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '23167'
+  negative: []
+- code: CE.99.96
+  name: BE to NL
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '23642'
+  negative: []
+- code: CE.99.97
+  name: CH to IT
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '25375'
+  negative: []
+- code: CE.1
+  name: Nord Stream 1+2
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '23695'
+  negative: []
+- code: CE.2
+  name: Yamal-Europe(Kondratki, Wysokoje, Tieterowka)
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '28481'
+  negative: []
+- code: CE.3
+  name: Net Ukraine Export to the West
+  group: pipeline
+  sub_group: export
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '27605'
+  - '27610'
+  - '27616'
+  - '27607'
+  - '27603'
+- code: CE.4
+  name: Ukraine Export to the West
+  group: pipeline
+  sub_group: export
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '27604'
+  - '27608'
+  - '27615'
+  - '27606'
+  - '27601'
+- code: CE.5
+  name: Ukraine Import from the West
+  group: pipeline
+  sub_group: import
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '33872'
+  - '27609'
+  - '27602'
+  - '50066'
+  - '50221'
+- code: CE.9
+  name: Sudja + Sokhranovka
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '27612'
+  negative: []
+- code: CE.7.04
+  name: Drozdwicze/Hermanowice
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '51036'
+  negative: []
+- code: CE.7.05
+  name: Budince
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '26165'
+- code: CE.7.14
+  name: Bereg
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '50907'
+  negative: []
+- code: CE.7.18
+  name: Orlovka
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '27089'
+  negative: []
+- code: CE.7.19
+  name: Tekovo
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '27071'
+  negative: []
+- code: CE.7.2
+  name: Ungheni
+  group: border_flows
+  sub_group: null
+  area: null
+  unit: mcm
+  positive: []
+  negative:
+  - '42195'
+- code: CE.7.09
+  name: Velke Kapusany
+  group: pipeline
+  sub_group: null
+  area: null
+  unit: mcm
+  positive:
+  - '26150'
+  negative: []

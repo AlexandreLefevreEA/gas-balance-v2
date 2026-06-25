@@ -29,6 +29,15 @@ ETL and forecasting are independent — run, retry, or backfill either alone.
 Cron/CI triggers `etl run all` on the source's natural cadence, then `ml forecast`.
 No orchestrator yet (ADR 0001); revisit if backfills or cross-job lineage get painful.
 
+**Commodity Essentials** runs hourly, re-fetching full history (since 2014) and
+upserting — re-runs are idempotent. Schedule with a plain cron line on the host:
+
+```cron
+0 * * * * cd /path/to/gas-balance-v2 && uv run etl run ce >> /var/log/etl-ce.log 2>&1
+```
+
+(`.env` must hold `CE_USERNAME` / `CE_PASSWORD` / `CE_BASE_URL` and `DATABASE_URL`.)
+
 ## Failure handling
 
 - **A connector fails validation** → that source's load is blocked; others proceed.

@@ -1,4 +1,3 @@
-# Scaffold — add src/gasbalance_etl/__init__.py, the `etl` CLI entrypoint, and deps during implementation.
 [project]
 name = "gasbalance-etl"
 version = "0.0.0"
@@ -6,11 +5,15 @@ description = "Source-agnostic ETL: per-source connectors → validate → load 
 requires-python = ">=3.12"
 dependencies = [
   "gasbalance-core",
-  # e.g. pandas, pandera, httpx, sqlalchemy — added when implemented
+  "pandas>=2.2",
+  "pandera>=0.20",
+  "httpx>=0.27",
+  "pyyaml>=6",
+  # sqlalchemy + pydantic-settings come transitively via gasbalance-core
 ]
 
-# [project.scripts]
-# etl = "gasbalance_etl.cli:main"   # uncomment when cli.py exists
+[project.scripts]
+etl = "gasbalance_etl.cli:main"
 
 [build-system]
 requires = ["hatchling"]

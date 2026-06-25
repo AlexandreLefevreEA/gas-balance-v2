@@ -10,7 +10,7 @@ requires-python = ">=3.12"
 members = ["core", "etl", "ml", "api"]
 
 [dependency-groups]
-dev = ["ruff>=0.8", "mypy>=1.13"]
+dev = ["ruff>=0.8", "mypy>=1.13", "pytest>=8"]
 
 [tool.ruff]
 line-length = 100
@@ -24,6 +24,12 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 python_version = "3.12"
 strict = true
 files = ["core/src", "etl/src", "ml/src", "api/src"]
+
+# pandas/yaml ship no usable stubs — treat as untyped instead of erroring on import.
+# (pandera is typed; we keep strict checking on it.)
+[[tool.mypy.overrides]]
+module = ["pandas", "pandas.*", "yaml"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 addopts = "-q"

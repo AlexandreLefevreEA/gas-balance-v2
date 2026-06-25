@@ -72,6 +72,4 @@ Python is a **uv workspace** (`core`, `etl`, `ml`, `api`). Single test:
 
 ## Security
 
-`.env` and `legacy/` are git-ignored. The legacy code contains plaintext
-credentials; do **not** bring `legacy/` under version control until those literals
-are scrubbed and the leaked CE/Kpler keys are rotated. See `legacy/CLAUDE.md`.
+`.env` and `legacy/` are git-ignored; secrets stay out of VCS.

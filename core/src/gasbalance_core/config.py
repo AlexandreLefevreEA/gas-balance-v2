@@ -28,10 +28,6 @@ class Settings(BaseSettings):
     database_url: str  # required; fail loudly if missing
     db_schema: str = "gas_balance"  # all objects live in this schema
 
-    @property
-    def is_local(self) -> bool:
-        return self.app_env == "local"
-
 
 @lru_cache
 def get_settings() -> Settings:

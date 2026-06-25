@@ -26,8 +26,14 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
 - **etl/** — one independent connector per data source. Each fetches its raw data,
   maps it to the canonical series schema, is **validated** (Pandera) before it can
   land, and loads into Postgres. Sources can be added/swapped/run in isolation.
-  *(Sources are not chosen yet — the scaffold ships the connector contract + a
-  template only. See ADR 0003.)*
+
+  **Sources**
+  - **ce** (Commodity Essentials) — European gas fundamentals (flows, storage, demand,
+    supply). HTTP Basic Auth, CSV `eugasseries` endpoint; **full refresh** hourly
+    (re-fetch history since 2014, idempotent upsert); curated series dictionary in
+    `etl/src/gasbalance_etl/settings/ce.yaml`. The first connector — it also bootstraps
+    the shared CLI (`etl run <source>`), the load/upsert step, and the canonical Pandera
+    schema, all kept source-agnostic. (ADR 0003.)
 - **ml/** — the data-science core. Reads clean series from Postgres, builds features
   (covariates), fits/backtests models from a registry, tracks experiments in MLflow,
   and writes forecasts back to Postgres. Models are config-selected, not hardcoded.
