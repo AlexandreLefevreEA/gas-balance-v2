@@ -16,7 +16,7 @@ import pandera.errors as pa_errors
 import pytest
 
 from gasbalance_etl.connectors.kpler_actual_temps import connector as kp
-from gasbalance_etl.validation.kpler_actual_temps import temperature_schema as schema
+from gasbalance_etl.validation.temperature import temperature_schema as schema
 
 # A 00z run on 2022-07-10 forecasting forward; only the next day (D-1) is the actual proxy.
 _RUN = dt.date(2022, 7, 10)

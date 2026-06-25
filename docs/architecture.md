@@ -41,6 +41,14 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     backfills). Hourly, so it lands in the `covariate` table — keyed by timestamp,
     separate from the daily `observation` actuals — via the connector's `load` hook.
     Areas map 1:1 to Kpler zones in `settings/kpler_actual_temps.yaml`. (ADR 0008.)
+  - **kpler_long_term_temperatures** (Kpler) — hourly forward-looking temperature
+    **climatology** per power zone, a demand **covariate**, from
+    `…/temperature/long-term`. Two flavours via `baseWeatherModel`: **MEAN** (the normal)
+    and **REF_YYYY** weather years (last 10 completed years, recomputed each run) — so 11
+    series per area, codes `KP.TEMPLT.<zone>.<MODEL>`. HTTP Basic Auth (shared Kpler key),
+    JSON; **full refresh weekly** of the forward window `[today, +24 months]` (profiles are
+    run-date-independent, so `runDate` is omitted). Hourly → lands in the `covariate` table
+    via the `load` hook. Zones in `settings/kpler_long_term_temperatures.yaml`. (ADR 0008.)
 - **ml/** — the data-science core. Reads clean series from Postgres, builds features
   (covariates), fits/backtests models from a registry, tracks experiments in MLflow,
   and writes forecasts back to Postgres. Models are config-selected, not hardcoded.

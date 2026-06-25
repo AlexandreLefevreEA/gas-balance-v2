@@ -1,0 +1,24 @@
+# Kpler long-term temperatures — one zone per balance area (covariate, °C).
+# Each entry maps a balance `area` to the Kpler `zone` we pull the forward hourly
+# climatology for. Today the map is identity (area code == zone code); it's explicit so a
+# split country (e.g. IT bidding zones) can be remapped without touching code.
+# The 11 model series per zone (MEAN + last-10 REF) are generated in
+# `connector.series_dict()` — codes `KP.TEMPLT.<zone>.<MODEL>`.
+- {area: AT, zone: AT}
+- {area: BE, zone: BE}
+- {area: BG, zone: BG}
+- {area: CZ, zone: CZ}
+- {area: DE, zone: DE}
+- {area: DK, zone: DK}
+- {area: FR, zone: FR}
+- {area: GB, zone: GB}
+- {area: GR, zone: GR}
+- {area: HR, zone: HR}
+- {area: HU, zone: HU}
+- {area: IT, zone: IT}
+- {area: LT, zone: LT}
+- {area: NL, zone: NL}
+- {area: PL, zone: PL}
+- {area: RO, zone: RO}
+- {area: SI, zone: SI}
+- {area: SK, zone: SK}

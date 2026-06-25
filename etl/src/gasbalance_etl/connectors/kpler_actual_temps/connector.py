@@ -37,7 +37,7 @@ import pandas as pd
 
 from gasbalance_etl.connectors.kpler_actual_temps.config import KplerSettings, get_kpler_settings
 from gasbalance_etl.settings import load_series_dict
-from gasbalance_etl.validation.kpler_actual_temps import temperature_schema
+from gasbalance_etl.validation.temperature import temperature_schema
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session

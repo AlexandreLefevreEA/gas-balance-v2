@@ -31,7 +31,7 @@ request per run-day (not per zone). We keep only the day-ahead slice (`startDate
 `fetch(since)` async-fetches one request per run-day (concurrency-bounded) → a tidy long
 frame `[zone, date(ts), value]`. `to_canonical(raw)` merges with the dictionary on `zone`
 to attach `series_id`/`area`/…, producing canonical rows validated by
-`../../validation/kpler_actual_temps.py` (plausible-range guard). `load` routes them to
+`../../validation/temperature.py` (plausible-range guard). `load` routes them to
 `covariate` keyed by the full hourly timestamp.
 
 ## Why D-1 (and not D-0)
