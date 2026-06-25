@@ -39,7 +39,7 @@ Single entrypoint is the `Makefile` (targets activate as subsystems are built):
 | Command | Does |
 |---|---|
 | `make setup` | uv env + workspace install; `npm install` for web |
-| `make lint` | ruff + mypy (python); eslint + tsc (web) |
+| `make lint` | ruff check + ruff format --check + mypy (python); eslint + tsc (web) |
 | `make test` | pytest (python); vitest (web) |
 | `make run-etl` | run the ETL CLI |
 | `make run-api` | run the API locally |
@@ -50,6 +50,12 @@ Python is a **uv workspace** (`core`, `etl`, `ml`, `api`). Single test:
 
 > Windows/PowerShell note: `make` needs WSL or Git-Bash. Without it, run the
 > underlying `uv …` / `npm …` commands directly (each `make` target is a thin wrapper).
+
+> **Before pushing, run the full check** — `make lint` **and** `make test`; CI runs
+> both and a red check blocks the merge. Without `make`, run *every* underlying command,
+> not a subset: `uv run ruff check`, `uv run ruff format --check`, `uv run mypy`,
+> `uv run pytest` (+ the `web/` equivalents). Note `ruff check` (lint) and
+> `ruff format --check` (formatting) are **separate** — passing one does not pass the other.
 
 ## Conventions
 
