@@ -1,11 +1,14 @@
-# Scaffold — add src/gasbalance_core/__init__.py and dependencies during implementation.
 [project]
 name = "gasbalance-core"
 version = "0.0.0"
-description = "Shared library: config, Postgres session, settings loader, logging, types."
+description = "Shared library: config, Postgres session, ORM models, types."
 requires-python = ">=3.12"
 dependencies = [
-  # e.g. pydantic, pydantic-settings, sqlalchemy, psycopg, pyyaml — added when implemented
+  "pydantic>=2",
+  "pydantic-settings>=2",
+  "sqlalchemy>=2",
+  "psycopg[binary]>=3.1",
+  "alembic>=1.13",
 ]
 
 [build-system]

@@ -33,7 +33,7 @@ Until 1–3 are done, do **not** un-ignore `legacy/`.
 | Optuna tuning, `optuna.db` | `ml/src/gasbalance_ml/tuning/` | DB git-ignored; experiments tracked in MLflow |
 | `settings/*.yaml`, `compile.py` | `etl/settings/` loaded via `core` settings loader | Hierarchical country/region/series config |
 | Excel + pickle output | Postgres tables → served by `api/` | No more files-as-interface |
-| `ea-connections`, `ea-power-timeseries` | kept as **dependencies**, wrapped behind connector interfaces | Don't rewrite working internal libs |
+| `ea-connections`, `ea-power-timeseries` | **Not used in v2 (for now)** | v2 connectors talk to sources directly; revisit only if a source genuinely needs them |
 
 ## Migration order (suggested)
 

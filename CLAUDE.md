@@ -60,6 +60,12 @@ Python is a **uv workspace** (`core`, `etl`, `ml`, `api`). Single test:
   the scaffold ships the contract + a template only.
 - Config & secrets come from env (`.env`, never committed); see `.env.example` for names.
 - Architectural decisions live in `docs/adr/`. Add one with `/new-adr`.
+- **Never touch `legacy/`** — frozen reference, excluded from VCS, reads blocked in
+  `.claude/settings.json`. Don't edit, import, run, or depend on it; port what you
+  need into the v2 subsystems. (One-time config extraction is the only exception.)
+- The DB schema name comes from `DB_SCHEMA` (config) — never hardcode it, including in migrations.
+- v2 does **not** depend on the legacy internal packages (`ea-power-timeseries`,
+  `ea-connections`) for now — connectors talk to sources directly.
 - Be lazy in the good sense: reuse `core/`, prefer stdlib/native, smallest change
   that works. Do **not** add Nx/dbt/DVC/Dagster/an orchestrator until a real need
   appears (the "not now" list is in `docs/adr/0005-lean-ds-tooling.md`).

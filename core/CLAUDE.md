@@ -5,17 +5,21 @@ re-implement config, DB sessions, or logging in etl/ml/api.**
 
 ## What lives here
 
-- `config.py` — typed settings loaded from env (pydantic-settings). Single source of config.
-- `db.py` — Postgres engine/session factory (SQLAlchemy 2.0).
-- `settings/` loader — reads the hierarchical YAML series/country/region config.
-- `logging.py` — structured logging setup.
-- `types.py` — shared domain types (the canonical series record, enums for group/area).
+- `config.py` — `Settings` from env (pydantic-settings): `APP_ENV`, `DATABASE_URL`,
+  `DB_SCHEMA`. `get_settings()` is the one entrypoint. Loads repo-root `.env` for local.
+- `db.py` — SQLAlchemy 2.0 `engine`, `SessionLocal`, and `Base` (metadata bound to
+  `DB_SCHEMA`; every connection sets `search_path`).
+- `models.py` — the ORM tables = the DB-shape data contract (series, scenario,
+  observation, forecast, etl_run, forecast_run). Producers write, the api reads.
+- _later_: settings (YAML) loader, structured logging, shared types.
+
+DB migrations live in `infra/db/` (Alembic, wired to this config). From the repo root:
+`uv run alembic -c infra/db/alembic.ini upgrade head`.
 
 ## Rules
 
-- No business logic, no models, no HTTP. This is plumbing only.
+- Config/DB plumbing only — no source connectors, no models math, no HTTP.
 - If two subsystems need the same helper, it belongs here.
 - Everything is typed; `mypy --strict` clean.
-
-> Scaffold: `src/gasbalance_core/` is empty pending implementation. Add
-> `__init__.py` + modules and declare deps in `pyproject.toml`.
+- Schema changes go through an Alembic migration that mirrors `models.py` — never edit the DB by hand.
+- The schema name is config (`DB_SCHEMA`), never a literal — migrations read it from `get_settings()`.
