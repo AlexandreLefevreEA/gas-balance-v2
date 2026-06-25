@@ -7,7 +7,9 @@
       "Read(./**/__pycache__/**)",
       "Read(./**/mlruns/**)",
       "Read(./**/data/**)",
-      "Read(./legacy/**)"
+      "Write(./legacy/**)",
+      "Edit(./legacy/**)",
+      "NotebookEdit(./legacy/**)"
     ],
     "allow": [
       "Bash(uv run pytest:*)",
