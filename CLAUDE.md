@@ -57,6 +57,10 @@ Python is a **uv workspace** (`core`, `etl`, `ml`, `api`). Single test:
 > `uv run pytest` (+ the `web/` equivalents). Note `ruff check` (lint) and
 > `ruff format --check` (formatting) are **separate** — passing one does not pass the other.
 
+> **Wait for review before pushing.** Commit locally and present the diff/summary; do
+> **not** `git push` until the user (or a reviewer) has explicitly approved. A green full
+> check is necessary but not sufficient — human review gates the push.
+
 ## Conventions
 
 - Python 3.12, type hints everywhere; `ruff` + `mypy --strict` must pass.
