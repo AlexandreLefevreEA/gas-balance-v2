@@ -14,6 +14,4 @@ import pandera.pandas as pa
 from gasbalance_etl.validation.canonical import canonical_schema
 
 # Plausible European 2 m temperature, °C. Tighten if false rejections ever appear.
-temperature_schema = canonical_schema.update_column(
-    "value", checks=pa.Check.in_range(-60.0, 60.0)
-)
+temperature_schema = canonical_schema.update_column("value", checks=pa.Check.in_range(-60.0, 60.0))

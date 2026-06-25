@@ -126,8 +126,13 @@ async def _request(client: httpx.AsyncClient, params: dict[str, Any]) -> httpx.R
             resp.raise_for_status()
             return resp
         wait = _retry_after(resp, attempt)
-        log.warning("kpler: HTTP %d; backing off %.0fs (attempt %d/%d)",
-                    resp.status_code, wait, attempt + 1, _MAX_RETRIES)
+        log.warning(
+            "kpler: HTTP %d; backing off %.0fs (attempt %d/%d)",
+            resp.status_code,
+            wait,
+            attempt + 1,
+            _MAX_RETRIES,
+        )
         await asyncio.sleep(wait)
     assert resp is not None
     resp.raise_for_status()  # retries exhausted -> surface the last transient error
