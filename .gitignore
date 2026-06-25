@@ -47,6 +47,9 @@ web/dist/
 .vite/
 *.local
 
+# --- Claude Code local settings (personal, per-machine; may grant permissions) ---
+.claude/settings.local.json
+
 # --- Editors / OS ---
 .idea/
 .vscode/
