@@ -113,6 +113,22 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     `covariate` table via the `load` hook; raw hourly UTC stored, gas-day aggregation applied
     downstream in `ml/`. Validated by `demand_schema` (MW band). Zones in
     `settings/kpler_power_demand.yaml`. (ADR 0008.)
+  - **kpler_power_demand_forecast** (Kpler) — the **forecast** counterpart of
+    `kpler_power_demand`, kept per vintage, from `…/power/loads/forecasts`. Hourly electricity
+    demand (total load, MW) **forecasts** per power zone, the two 00z models of the other
+    forecast covariates — **EC_AIFS_ENS** (~15-day) and **EC_46** (46-day, ~1-day publish lag);
+    one series per (zone × model), codes `KP.LOADFC.<zone>.<MODEL>`, `sub_group` = the `loadType`
+    (`demand`; `residual_demand` is a one-line add). Like `kpler_temps_forecast` it has a
+    **vintage** dimension, so it lands in **`forecast_covariate`** keyed `(series_id, made_on,
+    ts)`, validated by `forecast_covariate_demand_schema` (`unique(made_on, date, series_id)`).
+    **Self-managing & backfills** the keep-set (no history floor — EC_46 covers the trailing
+    year) + a refresh overlap; same **retention** (last 15 days + every Monday for a year) via
+    the `load` hook and `etl prune kpler_power_demand_forecast`. Required params the temperature
+    variant doesn't need are `loadType=demand` and `models`; `run=00z` keeps the clean single
+    daily run. Unlike `kpler_generation_forecast`, **`zones` batches every area in one request**
+    (plain country codes — `DE`, not `DE-LU`), so fetch issues **one request per run date**,
+    **fanned out concurrently** (bounded by `_CONCURRENCY`). Zones in
+    `settings/kpler_power_demand_forecast.yaml`. (ADR 0009.)
 - **ml/** — the data-science core. Reads clean series from Postgres, builds features
   (covariates), fits/backtests models from a registry, tracks experiments in MLflow,
   and writes forecasts back to Postgres. Models are config-selected, not hardcoded.
