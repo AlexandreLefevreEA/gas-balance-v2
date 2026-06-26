@@ -32,6 +32,7 @@ Auth: HTTP Basic with `KPLER_API_KEY_V2` (shared with the other Kpler connectors
 
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 import logging
 from typing import TYPE_CHECKING, Any
@@ -39,13 +40,15 @@ from typing import TYPE_CHECKING, Any
 import httpx
 import pandas as pd
 
-from gasbalance_etl.connectors._kpler_http import request
+from gasbalance_etl.connectors._kpler_http import arequest
 from gasbalance_etl.connectors.kpler_actual_temps.config import get_kpler_settings
 from gasbalance_etl.settings import load_series_dict
 from gasbalance_etl.validation.generation import generation_schema
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
+
+    from gasbalance_etl.connectors.kpler_actual_temps.config import KplerSettings
 
 log = logging.getLogger(__name__)
 
@@ -67,6 +70,11 @@ _KPLER_FUELTYPE = {
     "WIND": "wind",
     "ROR": "hydro run-of-river and poundage",
 }
+# ponytail: bound the concurrent in-flight requests. A run is only 33 (fuel x model) GETs, but
+# each is a big 24-mo x 18-zone payload, so fan them out instead of looping serially while keeping
+# a cap so we don't trip the rate limit (the shared helper still retries 429/5xx). Raise if the API
+# tolerates more; lower if you see sustained 429s.
+_CONCURRENCY = 8
 
 
 def _models() -> list[str]:
@@ -123,7 +131,8 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
     `since` (framework contract) is ignored — we always take the latest run (runDate omitted) and
     re-pull the same forward window; the idempotent upsert overwrites the single-vintage covariate
     in place. One request per (fuel, model) returns all zones (`zones[]`), so a run is
-    `len(fuels) x len(models)` (= 3 x 11 = 33) requests.
+    `len(fuels) x len(models)` (= 3 x 11 = 33) requests, fanned out concurrently (bounded by
+    `_CONCURRENCY`) over the shared 429/5xx retry/backoff.
     """
     del since
     cfg = get_kpler_settings()
@@ -134,23 +143,53 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
     start = today
     end = (pd.Timestamp(today) + pd.DateOffset(months=_HORIZON_MONTHS)).date()
     log.info(
-        "kpler-gen-lt: %d fuels x %d models x %d zones (%s..%s)",
+        "kpler-gen-lt: %d fuels x %d models x %d zones, <=%d concurrent (%s..%s)",
         len(_FUELS),
         len(models),
         len(zones),
+        _CONCURRENCY,
         start,
         end,
     )
 
-    rows: list[tuple[str, str, str, str, float]] = []
-    with httpx.Client(
+    rows = asyncio.run(_fetch_rows(cfg, zones, models, start, end))
+
+    # ponytail: holds the full ~10M-row frame in memory (3x the temp long-term, all 33 requests).
+    # The CLI loads the whole canonical frame at once, so streaming would need a CLI change; the
+    # cheap knob is _HORIZON_MONTHS if it ever bites.
+    df = pd.DataFrame(rows, columns=["zone", "fuel", "model", "date", "value"])
+    if not df.empty:
+        # Kpler returns tz-aware UTC ISO; canonical `date` is datetime64[ns] (naive UTC).
+        df["date"] = pd.to_datetime(df["date"], utc=True).dt.tz_localize(None)
+    return df
+
+
+async def _fetch_rows(
+    cfg: KplerSettings,
+    zones: list[str],
+    models: list[str],
+    start: dt.date,
+    end: dt.date,
+) -> list[tuple[str, str, str, str, float]]:
+    """Fan out one request per (fuel, model) concurrently (bounded), collect raw rows.
+
+    Each request batches all zones (`zones[]`); the response echoes neither fuelType nor
+    baseWeatherModel, so each row is tagged with the (fuel code, model) its request asked for.
+    Order is irrelevant — `to_canonical` groups. A `_CONCURRENCY` semaphore caps in-flight
+    requests; `arequest` handles 429/5xx retries underneath.
+    """
+    sem = asyncio.Semaphore(_CONCURRENCY)
+    combos = [(fuel, fuel_type, m) for fuel, fuel_type in _KPLER_FUELTYPE.items() for m in models]
+
+    async with httpx.AsyncClient(
         base_url=cfg.base_url,
         headers={"Authorization": f"Basic {cfg.api_key_v2}", "Accept": "application/json"},
         timeout=180.0,
     ) as client:
-        for fuel, fuel_type in _KPLER_FUELTYPE.items():
-            for m in models:
-                resp = request(
+
+        async def one(fuel: str, fuel_type: str, m: str) -> list[tuple[str, str, str, str, float]]:
+            async with sem:
+                resp = await arequest(
                     client,
                     _ENDPOINT,
                     {
@@ -165,20 +204,14 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
                     },
                     label="kpler-gen-lt",
                 )
-                rows.extend(
-                    (d["zone"], fuel, m, d["startDate"], d["value"])
-                    for d in resp.json().get("data", [])
-                    if d.get("value") is not None
-                )
+            return [
+                (d["zone"], fuel, m, d["startDate"], d["value"])
+                for d in resp.json().get("data", [])
+                if d.get("value") is not None
+            ]
 
-    # ponytail: holds the full ~10M-row frame in memory (3x the temp long-term, all 33 requests).
-    # The CLI loads the whole canonical frame at once, so streaming would need a CLI change; the
-    # cheap knob is _HORIZON_MONTHS if it ever bites.
-    df = pd.DataFrame(rows, columns=["zone", "fuel", "model", "date", "value"])
-    if not df.empty:
-        # Kpler returns tz-aware UTC ISO; canonical `date` is datetime64[ns] (naive UTC).
-        df["date"] = pd.to_datetime(df["date"], utc=True).dt.tz_localize(None)
-    return df
+        chunks = await asyncio.gather(*(one(f, ft, m) for f, ft, m in combos))
+    return [row for chunk in chunks for row in chunk]
 
 
 def to_canonical(raw: pd.DataFrame) -> pd.DataFrame:

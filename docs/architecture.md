@@ -92,7 +92,8 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     years, recomputed each run). The endpoint's `fuelType` enum is exactly the three renewables —
     **solar, wind, run-of-river** (no gas; **wind is one fuel**, no onshore/offshore split) — one
     per request, while `zones[]` batches every area, so a run is `fuels × models` (= 3 × 11 = 33)
-    requests. 33 series per area, codes `KP.GENLT.<FUEL>.<zone>.<MODEL>`, `sub_group` = fuel
+    requests, **fanned out concurrently** (bounded by `_CONCURRENCY`). 33 series per area, codes
+    `KP.GENLT.<FUEL>.<zone>.<MODEL>`, `sub_group` = fuel
     (`zones` is the ENTSO-E **bidding-zone** enum — Germany is `DE-LU`). HTTP Basic Auth (shared
     Kpler key), JSON; **full refresh weekly** of the forward window `[today, +24 months]`. Unlike
     the long-term temperatures this profile is **not** run-date-independent (it shifts by hundreds

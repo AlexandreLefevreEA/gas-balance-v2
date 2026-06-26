@@ -29,7 +29,8 @@ Probed quirks (live, with `.env` creds):
   `solar`, `wind`, `hydro run-of-river and poundage` (**no gas**). **`wind` is one fuel** here
   (no onshore/offshore split → no folding), unlike the actual/forecast endpoints.
 - **`zones[]` batches all areas in one request**, so a run is `fuels × models` (= 3 × 11 = 33)
-  requests, **not** one-per-zone like the short-term `…/forecasts` endpoint.
+  requests, **not** one-per-zone like the short-term `…/forecasts` endpoint. The 33 requests are
+  **fanned out concurrently** (bounded by `_CONCURRENCY`) over the shared 429/5xx retry/backoff.
 - `zones` is the ENTSO-E **bidding-zone** enum — Germany is **`DE-LU`** (plain `DE` 422s).
 - The response **does not echo** `fuelType` or `baseWeatherModel`, so the connector tags each
   request's rows with the fuel code and model it asked for.
@@ -49,8 +50,8 @@ dropped from the dictionary as the 10-year window slides keep their stored rows 
 
 ## Shape
 
-`fetch(since)` loops one request per (fuel, model) → tidy long frame `[zone, fuel, model,
-date(ts), value]` (fuel = our code). `to_canonical(raw)` merges with the dictionary on
+`fetch(since)` fans out one request per (fuel, model) concurrently (bounded by `_CONCURRENCY`,
+via `arequest`) → tidy long frame `[zone, fuel, model, date(ts), value]` (fuel = our code). `to_canonical(raw)` merges with the dictionary on
 `(zone, fuel, model)` to attach `series_id`/`area`/`sub_group`/…, producing canonical rows
 validated by `../../validation/generation.py` (MW sanity band, shared with
 `kpler_generation_actual`). `load` routes them to `covariate` keyed by the full hourly timestamp.
