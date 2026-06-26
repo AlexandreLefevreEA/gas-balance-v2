@@ -125,6 +125,29 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     trading day) and take its `settlementPrice`; `root == SEMA` (the EUAA *aviation* allowance) is
     dropped. Daily settlement → the single-vintage `covariate` table (midnight-UTC `ts`) via the
     `load` hook. Validated by `carbon_schema` (EUR/tCO2 band). (ADR 0008.)
+  - **kpler_carbon_settles** (Kpler) — daily EU carbon (EUA) **futures settlement** anchors
+    (EUR/tCO2), the raw monthly forward points that the `carbon_curve` transform splines into a
+    daily curve, from `…/power/prices/futures/settlements/emissions`. A **single** EU series, code
+    `KP.CARBON.SETTLES` (`group` = `carbon`, `sub_group` = `eua_settles`), hardcoded in
+    `series_dict()`. The endpoint returns three emissions product families per trading date (all
+    `maturityType = month`): we keep `longName == "EEX EUA Future"` (the EU ETS1 allowance,
+    EUR/tCO2) and drop `EEX EU ETS2 Future` (EUR/EUA2) and `EEX UKA Futures` (GBP/UKA). HTTP Basic
+    Auth (shared Kpler key), JSON; params are `tradingDate` (required) + `provider` (default `eex`),
+    so a run is **one request per trading date**, **fanned out concurrently** (bounded by
+    `_CONCURRENCY`). The **vintage** is `tradingDate` (`ts` = contract `maturityDate`), so anchors
+    land in the vintage-keyed `forecast_covariate` (keep all of the last 15 days + every Monday for
+    a year; EUA history is deep so no floor is needed). Validated by
+    `forecast_covariate_carbon_schema` (EUR/tCO2 band). (ADR 0009.)
+  - **carbon_curve** (derived transform) — the daily EU carbon (EUA) **spline forward curve**
+    (EUR/tCO2), code `KP.CARBON.CURVE` (`group` = `carbon`, `sub_group` = `eua_curve`,
+    `is_derived`). Not a network source: like `transforms/derived` it reads from Postgres — the EUA
+    **spot** (`KP.CARBON.SPOT`) and the EUA **settlement anchors** (`KP.CARBON.SETTLES`) — and per
+    trading date fits a **natural cubic spline** through `[spot @ trading date] + [settlement @ each
+    contract maturity]` (maturities before the trading date dropped so the spot is the near anchor),
+    sampling it **daily** out to the last contract (~Dec-2034). Registered after the raw Kpler
+    sources (the CLI commits each before the next, ADR 0007), so `etl run all` builds the curve from
+    freshly-loaded inputs. Vintage-keyed `forecast_covariate` with the same retention as the
+    settles, validated by `forecast_covariate_carbon_schema`. (ADR 0009.)
   - **kpler_gas_spot** (Kpler) — daily EEX **gas day-ahead spot price** (EUR/MWh) per EU gas hub,
     an exogenous **covariate** for gas-for-power demand (the gas price sets gas-vs-coal switching
     economics), from `…/power/prices/spot/gas`. One series per market area, code

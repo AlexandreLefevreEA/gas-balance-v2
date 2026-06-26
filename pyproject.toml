@@ -25,10 +25,10 @@ python_version = "3.12"
 strict = true
 files = ["core/src", "etl/src", "ml/src", "api/src"]
 
-# pandas/yaml ship no usable stubs — treat as untyped instead of erroring on import.
+# pandas/yaml/scipy ship no usable stubs — treat as untyped instead of erroring on import.
 # (pandera is typed; we keep strict checking on it.)
 [[tool.mypy.overrides]]
-module = ["pandas", "pandas.*", "yaml"]
+module = ["pandas", "pandas.*", "yaml", "scipy", "scipy.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

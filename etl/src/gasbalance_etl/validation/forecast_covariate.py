@@ -5,15 +5,17 @@ A forecast keeps many vintages (run dates) of the same delivery hour, so the can
 Everything else (column shape, the source's value guard) is reused unchanged from the matching
 non-forecast schema: `temperature_schema` ([-60, 60] °C) for temperature forecasts,
 `generation_schema` ([-10_000, 200_000] MW) for generation forecasts, `demand_schema`
-([-10_000, 200_000] MW) for power-demand forecasts, and `price_schema` ([-1_000, 5_000] EUR/MWh)
-for power price-forward-curve forecasts. Used by forecast connectors that load into the
-vintage-keyed `forecast_covariate` table. See ADR 0009.
+([-10_000, 200_000] MW) for power-demand forecasts, `price_schema` ([-1_000, 5_000] EUR/MWh)
+for power price-forward-curve forecasts, and `carbon_schema` ([0, 1000] EUR/tCO2) for the carbon
+(EUA) futures-settlement anchors and the spline forward curve. Used by forecast connectors that
+load into the vintage-keyed `forecast_covariate` table. See ADR 0009.
 """
 
 from __future__ import annotations
 
 import pandera.pandas as pa
 
+from gasbalance_etl.validation.carbon import carbon_schema
 from gasbalance_etl.validation.demand import demand_schema
 from gasbalance_etl.validation.generation import generation_schema
 from gasbalance_etl.validation.price import price_schema
@@ -59,6 +61,17 @@ forecast_covariate_power_price_schema = pa.DataFrameSchema(
         "made_on": pa.Column("datetime64[ns]", nullable=False),  # the trading date (vintage)
     },
     unique=["made_on", "date", "series_id"],  # a vintage, a delivery day, a series
+    coerce=True,
+    strict=False,
+)
+
+forecast_covariate_carbon_schema = pa.DataFrameSchema(
+    name="forecast_covariate_carbon",
+    columns={
+        **carbon_schema.columns,
+        "made_on": pa.Column("datetime64[ns]", nullable=False),  # the trading date (vintage)
+    },
+    unique=["made_on", "date", "series_id"],  # a vintage, a maturity/delivery day, a series
     coerce=True,
     strict=False,
 )
