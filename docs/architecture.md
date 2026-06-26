@@ -168,6 +168,19 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     (no day-ahead) are excluded. Daily settlement, indexed by **trading date** → the single-vintage
     `covariate` table (midnight-UTC `ts`) via the `load` hook; first run backfills from 2020.
     Validated by `gas_spot_schema` (EUR/MWh band). (ADR 0008.)
+  - **ecb_fx** (ECB) — daily euro **FX reference rates** (units of foreign currency per 1 EUR),
+    a price/supply **covariate** (USD for LNG/oil, GBP for the UK NBP hub, NOK for Norwegian
+    pipeline supply), from the **public** file
+    `https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip` — **no auth**. One series per
+    currency, code `ECB.FX.<currency>` (`group` = `fx`, `sub_group` = `spot`, `unit` =
+    `<CCY>/EUR`); the kept currencies — USD, GBP, NOK — in `settings/ecb_fx.yaml`. Rates are
+    stored **as published** (foreign per EUR); inversion is a downstream `ml/` concern. The ZIP
+    holds one wide CSV (`Date` + a column per currency, history from 1999); `fetch()` is a
+    **single** GET (no async), `_parse` drops the trailing `Unnamed` column and `N/A`/blank cells
+    and melts to long. **Full refresh** every run — the file is the whole history and the upsert
+    is idempotent, so there is no incremental window. Daily rate, indexed by date → the
+    single-vintage `covariate` table (midnight-UTC `ts`) via the `load` hook. Validated by
+    `fx_schema` (a `(0, 1000]` gross-error band). (ADR 0008.)
   - **kpler_power_demand_forecast** (Kpler) — the **forecast** counterpart of
     `kpler_power_demand`, kept per vintage, from `…/power/loads/forecasts`. Hourly electricity
     demand (total load, MW) **forecasts** per power zone, the two 00z models of the other

@@ -1,0 +1,9 @@
+# ECB euro FX reference rates — one daily series per currency (covariate, foreign per EUR).
+# Rates are units of foreign currency per 1 EUR, exactly as the ECB publishes them
+# (e.g. USD ~1.08 means 1 EUR = 1.08 USD); inversion to EUR-per-foreign is a downstream
+# ml/ concern. This list is the curation knob: add a row to ingest another currency the
+# ECB hist file carries (USD, JPY, GBP, NOK, SEK, DKK, CHF, PLN, CZK, HUF, RON, BGN, …).
+# One series per row (code ECB.FX.<currency>) is generated in connector.series_dict().
+- {currency: USD, name: US Dollar}        # LNG / oil pricing
+- {currency: GBP, name: Pound Sterling}   # UK NBP gas hub
+- {currency: NOK, name: Norwegian Krone}  # Norwegian pipeline supply

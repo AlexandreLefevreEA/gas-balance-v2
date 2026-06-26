@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import Any
 
 from gasbalance_etl.connectors.ce import connector as _ce
+from gasbalance_etl.connectors.ecb_fx import connector as _ecb_fx
 from gasbalance_etl.connectors.kpler_actual_temps import connector as _kpler
 from gasbalance_etl.connectors.kpler_availability import connector as _kpler_avail
 from gasbalance_etl.connectors.kpler_availability_forecast import connector as _kpler_avail_fc
@@ -35,6 +36,7 @@ from gasbalance_etl.transforms import derived as _derived
 
 REGISTRY: dict[str, Any] = {
     _ce.source: _ce,
+    _ecb_fx.source: _ecb_fx,
     _kpler.source: _kpler,
     _kpler_avail.source: _kpler_avail,
     _kpler_avail_fc.source: _kpler_avail_fc,
