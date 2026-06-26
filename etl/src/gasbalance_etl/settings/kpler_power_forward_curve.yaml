@@ -1,0 +1,24 @@
+# Kpler power price forward curve — one baseload series per balance area (forecast covariate, EUR/MWh).
+# Each entry maps a balance `area` to the Kpler `zone` we pull forward curves for. Like
+# `kpler_generation_forecast`, this endpoint validates `zones` against a **bidding-zone** enum, so
+# Germany is **DE-LU**, not DE (Luxembourg is coupled into the German market zone). All others
+# match the area code. `DK` and `LT` are **omitted** — they are not in this endpoint's zone enum
+# (a request including them returns HTTP 422). The map is explicit so such source quirks (and
+# split countries) are remapped without touching code. One series per zone is generated in
+# `connector.series_dict()` — codes `KP.PFC.<zone>` (so Germany is `KP.PFC.DE-LU`).
+- {area: AT, zone: AT}
+- {area: BE, zone: BE}
+- {area: BG, zone: BG}
+- {area: CZ, zone: CZ}
+- {area: DE, zone: DE-LU}
+- {area: FR, zone: FR}
+- {area: GB, zone: GB}
+- {area: GR, zone: GR}
+- {area: HR, zone: HR}
+- {area: HU, zone: HU}
+- {area: IT, zone: IT}
+- {area: NL, zone: NL}
+- {area: PL, zone: PL}
+- {area: RO, zone: RO}
+- {area: SI, zone: SI}
+- {area: SK, zone: SK}

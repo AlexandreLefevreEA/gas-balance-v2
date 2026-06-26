@@ -1,0 +1,27 @@
+# Kpler day-ahead power prices — one price series per balance area (covariate, EUR/MWh).
+# Each entry maps a balance `area` to the Kpler `zone` we pull hourly day-ahead prices for.
+# This endpoint validates `zones` against the ENTSO-E **bidding-zone** enum (like
+# kpler_generation_forecast), NOT the loads/country-code family — so three areas are remapped:
+#   DE -> DE-LU    (only valid German zone; Luxembourg is coupled in)
+#   DK -> DK1      (West Denmark — larger, gas/thermal-heavy; DK2 is the East/Copenhagen zone)
+#   IT -> IT-NORTH (gas-plant heartland; Italy's national IT-PUN is in the enum but has no data)
+# All other areas match the area code. One series per zone (code KP.SPOT.<zone>) is generated
+# in `connector.series_dict()`; Germany is `KP.SPOT.DE-LU`, Italy `KP.SPOT.IT-NORTH`.
+- {area: AT, zone: AT}
+- {area: BE, zone: BE}
+- {area: BG, zone: BG}
+- {area: CZ, zone: CZ}
+- {area: DE, zone: DE-LU}
+- {area: DK, zone: DK1}
+- {area: FR, zone: FR}
+- {area: GB, zone: GB}
+- {area: GR, zone: GR}
+- {area: HR, zone: HR}
+- {area: HU, zone: HU}
+- {area: IT, zone: IT-NORTH}
+- {area: LT, zone: LT}
+- {area: NL, zone: NL}
+- {area: PL, zone: PL}
+- {area: RO, zone: RO}
+- {area: SI, zone: SI}
+- {area: SK, zone: SK}

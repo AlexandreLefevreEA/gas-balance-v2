@@ -113,6 +113,34 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     `covariate` table via the `load` hook; raw hourly UTC stored, gas-day aggregation applied
     downstream in `ml/`. Validated by `demand_schema` (MW band). Zones in
     `settings/kpler_power_demand.yaml`. (ADR 0008.)
+  - **kpler_carbon_spot** (Kpler) — daily EU carbon (EUA) **emissions spot price** (EUR/tCO2), an
+    exogenous **covariate** for gas-for-power demand (the carbon price sets gas-vs-coal switching
+    economics), from `…/power/prices/spot/emissions`. A **single** global EU series, code
+    `KP.CARBON.SPOT` (`group` = `carbon`, `sub_group` = `eua`) — no per-zone list, so the series is
+    hardcoded in `series_dict()`. HTTP Basic Auth (shared Kpler key), JSON; **incremental**
+    (self-managed from the last loaded timestamp; first run backfills from 2015). The endpoint's
+    only params are `tradingDate` (one date, required) and `provider` (default `eex`) — **no zone,
+    no date range** — so a run is **one request per trading date**, **fanned out concurrently**
+    (bounded by `_CONCURRENCY`). Each day we keep `root == SEME` ("EEX EUA Spot", present every
+    trading day) and take its `settlementPrice`; `root == SEMA` (the EUAA *aviation* allowance) is
+    dropped. Daily settlement → the single-vintage `covariate` table (midnight-UTC `ts`) via the
+    `load` hook. Validated by `carbon_schema` (EUR/tCO2 band). (ADR 0008.)
+  - **kpler_gas_spot** (Kpler) — daily EEX **gas day-ahead spot price** (EUR/MWh) per EU gas hub,
+    an exogenous **covariate** for gas-for-power demand (the gas price sets gas-vs-coal switching
+    economics), from `…/power/prices/spot/gas`. One series per market area, code
+    `KP.GASSPOT.<marketArea>` (`group` = `price`, `sub_group` = `gas_spot`); the **11 EUR/MWh
+    day-ahead hubs** — TTF (NL), THE (DE), PEG (FR), PVB (ES), CEGH (AT), OTE (CZ), ZTP (BE), FIN,
+    LTU, LVA-EST, ETF — in `settings/kpler_gas_spot.yaml`. The params are `marketArea` (enum, one
+    per request) + `tradingDate` (one date, required) + optional `provider` (default `eex`) — **no
+    date range, no zones-batch** — so a run is **marketAreas × weekday trading dates** requests
+    (continental day-ahead doesn't trade weekends), **fanned out concurrently** (bounded by
+    `_CONCURRENCY`). Each day we keep the day-ahead **"DAY 1 MW"** record (`tenor = day_ahead`,
+    `longName` ending `DAY 1 MW`) and take its `settlementPrice`, falling back to `lastPrice` when
+    unsettled (current day / thin holiday); the within-day, weekend (SAT/SUN MW) legs and the
+    duplicate named spot-index root (`<HUB>DA`) are dropped. **NBP** (p/therm) and **GPL/NCG/ZEE**
+    (no day-ahead) are excluded. Daily settlement, indexed by **trading date** → the single-vintage
+    `covariate` table (midnight-UTC `ts`) via the `load` hook; first run backfills from 2020.
+    Validated by `gas_spot_schema` (EUR/MWh band). (ADR 0008.)
   - **kpler_power_demand_forecast** (Kpler) — the **forecast** counterpart of
     `kpler_power_demand`, kept per vintage, from `…/power/loads/forecasts`. Hourly electricity
     demand (total load, MW) **forecasts** per power zone, the two 00z models of the other
@@ -146,6 +174,35 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     `covariate`** in place — we do not vintage it (that's `kpler_power_demand_forecast`). Validated
     by the shared `demand_schema` (MW band). Zones in
     `settings/kpler_power_demand_long_term.yaml`. (ADR 0008.)
+  - **kpler_power_forward_curve** (Kpler) — daily power-price **forward curve** (EUR/MWh) per
+    power zone, a forecast **covariate** for gas-for-power demand (forward power prices drive gas
+    dispatch), from `…/power/prices/price-forward-curve/power` — the EEX-futures-settlement curve
+    of a given **trading date**. One baseload series per zone, code `KP.PFC.<zone>`, `sub_group` =
+    the `demandPeriod` (`base`), `main` scenario. **`zones` batches every area in one request**, so
+    a run is **one request per trading date**, **fanned out concurrently** (bounded by
+    `_CONCURRENCY`). `zones` is the **bidding-zone** enum — Germany is `DE-LU` (DK and LT aren't in
+    it, so they're dropped); the endpoint **rejects a `timezone` param** (HTTP 422), unlike the
+    loads/generations forecasts. HTTP Basic Auth (shared Kpler key), JSON; **self-managing &
+    backfills** the forecast keep-set of trading dates (+ a 3-day refresh). The **vintage** is
+    `tradingDate`, so rows land in the vintage-keyed `forecast_covariate` (keep all of the last 15
+    days + every Monday for a year; history begins ~2023, weekend/holiday dates have no
+    settlement). Validated by `forecast_covariate_power_price_schema` (EUR/MWh band). Zones in
+    `settings/kpler_power_forward_curve.yaml`. (ADR 0009.)
+  - **kpler_power_spot** (Kpler) — hourly actual **day-ahead electricity spot price**
+    (EUR/MWh) per power zone, an exogenous **covariate** for gas-for-power demand (high power
+    prices → gas plants are in the money and run), from `…/power/prices/day-ahead`. One series
+    per area, code `KP.SPOT.<zone>`, `sub_group` = `day_ahead`. HTTP Basic Auth (shared Kpler
+    key), JSON; **incremental** (self-managed from the last loaded timestamp; first run
+    backfills from 2016 — the API floors `startDate` at 2014 and 2015 is empty). Like
+    `kpler_generation_actual`, **`zones` batches every area in one request**, so a run is one
+    request per ~1-year date chunk, **fanned out concurrently** (bounded by `_CONCURRENCY`).
+    But `zones` is the ENTSO-E **bidding-zone** enum (like `kpler_generation_forecast`, not the
+    loads/country-code family): Germany is `DE-LU`, Denmark `DK1`, Italy `IT-NORTH` (Italy's
+    national `IT-PUN` is in the enum but returns no data); GB is normalised to EUR (no currency
+    split). Day-ahead prices legitimately go **negative** and spike high. Hourly → lands in the
+    `covariate` table via the `load` hook; raw hourly UTC stored, gas-day aggregation applied
+    downstream in `ml/`. Validated by `spot_price_schema` (EUR/MWh band). Zones in
+    `settings/kpler_power_spot.yaml`. (ADR 0008.)
 - **ml/** — the data-science core. Reads clean series from Postgres, builds features
   (covariates), fits/backtests models from a registry, tracks experiments in MLflow,
   and writes forecasts back to Postgres. Models are config-selected, not hardcoded.
