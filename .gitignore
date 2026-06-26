@@ -49,6 +49,8 @@ web/dist/
 
 # --- Claude Code local settings (personal, per-machine; may grant permissions) ---
 .claude/settings.local.json
+# Worktree-guard runtime locks (one per live session; see .claude/hooks/worktree-lib.ps1)
+.claude/locks/
 
 # --- Editors / OS ---
 .idea/

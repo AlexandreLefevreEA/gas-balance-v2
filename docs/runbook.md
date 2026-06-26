@@ -13,6 +13,36 @@ make dev                      # docker-compose: postgres + api + web
 
 API at `http://localhost:8000`, web at the Vite dev URL. Stop with Ctrl-C.
 
+## Parallel work (multiple agents)
+
+A git **branch isolates commits, not files** — every branch shares the single working
+tree, index, and `HEAD` of one checkout. So two Claude agents (or two terminals) editing
+the same folder at once **collide**: edits clobber each other, `git add -A` cross-stages,
+and a commit lands on whatever branch is checked out. Branching alone does **not** isolate
+them.
+
+**Rule: one checkout = one agent.** Each concurrent agent works in its own **git
+worktree** — a separate working directory linked to the same repo, with its own files and
+index:
+
+```bash
+git worktree add ../gas-balance-v2-<task> -b <branch>   # new dir + new branch
+cd ../gas-balance-v2-<task>                             # edit + commit here
+git worktree list                                       # see all worktrees
+git worktree remove ../gas-balance-v2-<task>            # clean up when done (from main checkout)
+```
+
+For subagents spawned inside a session, pass `isolation: "worktree"` (the Agent tool /
+`EnterWorktree`) so each gets its own checkout.
+
+**Enforcement.** A `PreToolUse` hook (`.claude/hooks/worktree-guard.ps1`, wired in
+`.claude/settings.json`) blocks `Edit`/`Write`/`NotebookEdit` when a **second live
+session** is detected in the same checkout, printing the `git worktree add` command to
+run. The earliest session "owns" a checkout via a short heartbeat lock under
+`.claude/locks/` (~10 min freshness, released on clean exit); later concurrent sessions
+are blocked until they move to their own worktree. Solo work and separate worktrees are
+never blocked, and the guard fails **open** — a hook error never blocks an edit.
+
 ## Running the pipeline
 
 ```bash
