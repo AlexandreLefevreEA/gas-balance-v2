@@ -34,6 +34,7 @@ def sync_series(
         {
             "code": d["code"],
             "name": d["name"],
+            # canonical uses `group`; the ORM column is `category` (`group` is a SQL reserved word)
             "category": d.get("group"),
             "sub_group": d.get("sub_group"),
             "area": d.get("area"),

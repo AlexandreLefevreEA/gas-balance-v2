@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Any
 import httpx
 import pandas as pd
 
+from gasbalance_etl.connectors._kpler_common import date_chunks, last_loaded_ts
 from gasbalance_etl.connectors._kpler_http import request
 from gasbalance_etl.connectors.kpler_actual_temps.config import get_kpler_settings
 from gasbalance_etl.settings import load_series_dict
@@ -99,33 +100,6 @@ def load(session: Session, df: pd.DataFrame, run_id: int, code_to_id: dict[str, 
     return upsert_covariates(session, df, run_id, code_to_id)
 
 
-def _last_loaded_ts() -> dt.datetime | None:
-    """Latest covariate timestamp already stored for this source (or None)."""
-    from sqlalchemy import func, select
-
-    from gasbalance_core.db import SessionLocal
-    from gasbalance_core.models import Covariate, Series
-
-    stmt = (
-        select(func.max(Covariate.ts))
-        .join(Series, Covariate.series_id == Series.id)
-        .where(Series.source == source)
-    )
-    with SessionLocal() as session:
-        return session.execute(stmt).scalar_one_or_none()
-
-
-def _date_chunks(start: dt.date, end: dt.date) -> list[tuple[dt.date, dt.date]]:
-    """Split [start, end) into <= _CHUNK_DAYS windows (the API's endDate is exclusive)."""
-    chunks: list[tuple[dt.date, dt.date]] = []
-    cur = start
-    while cur < end:
-        nxt = min(cur + dt.timedelta(days=_CHUNK_DAYS), end)
-        chunks.append((cur, nxt))
-        cur = nxt
-    return chunks
-
-
 def fetch(since: dt.date | None = None) -> pd.DataFrame:
     """Incremental: pull hourly generation for every hour not yet loaded.
 
@@ -135,7 +109,7 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
     del since
     cfg = get_kpler_settings()
     zones = [e["zone"] for e in load_series_dict(source)]
-    last = _last_loaded_ts()
+    last = last_loaded_ts(source)
     start = (
         _HISTORY_START
         if last is None
@@ -153,7 +127,7 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
         headers={"Authorization": f"Basic {cfg.api_key_v2}", "Accept": "application/json"},
         timeout=180.0,
     ) as client:
-        for lo, hi in _date_chunks(start, end):
+        for lo, hi in date_chunks(start, end, _CHUNK_DAYS):
             resp = request(
                 client,
                 _ENDPOINT,

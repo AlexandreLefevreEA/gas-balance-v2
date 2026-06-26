@@ -43,6 +43,11 @@ from typing import TYPE_CHECKING, Any, cast
 import httpx
 import pandas as pd
 
+from gasbalance_etl.connectors._kpler_common import (
+    desired_run_dates,
+    loaded_run_dates,
+    vintages_to_delete,
+)
 from gasbalance_etl.connectors._kpler_http import arequest
 from gasbalance_etl.connectors.kpler_actual_temps.config import get_kpler_settings
 from gasbalance_etl.settings import load_series_dict
@@ -67,10 +72,6 @@ _MODELS = ["EC_AIFS_ENS", "EC_46"]
 # Kpler `loadType` enum is {demand, residual_demand}; we ingest total demand (matches the actual
 # KP.LOAD.<zone> series). To also pull residual demand, loop this and tag sub_group/code per type.
 _LOAD_TYPE = "demand"
-# Retention window (also drives the fetch keep-set): keep all daily runs this many days back,
-# plus every Monday run for a year.
-_KEEP_DAILY_DAYS = 15
-_KEEP_MONDAY_DAYS = 365
 # Re-pull the most recent few run dates each run, to catch revised runs and the late EC_46.
 _REFRESH_DAYS = 3
 # ponytail: bound the concurrent in-flight requests. `zones`/`models` batch into one request per
@@ -108,53 +109,13 @@ def series_dict() -> list[dict[str, Any]]:
 
 
 def _desired_run_dates(today: dt.date) -> list[dt.date]:
-    """The retention keep-set: every day in the last 15 days + every Monday in the last year.
-
-    Fetching exactly the keep-set means we never pull a vintage we'd immediately prune.
-    """
-    daily = {today - dt.timedelta(days=i) for i in range(_KEEP_DAILY_DAYS + 1)}
-    mondays = {
-        d
-        for i in range(_KEEP_MONDAY_DAYS + 1)
-        if (d := today - dt.timedelta(days=i)).weekday() == 0
-    }
-    return sorted(daily | mondays)
+    """This connector's fetch keep-set = the shared retention rule (no history floor)."""
+    return desired_run_dates(today)
 
 
 def _vintages_to_delete(made_ons: list[dt.date], today: dt.date) -> set[dt.date]:
-    """Run dates to drop: keep all of the last 15 days + every Monday for a year, delete rest.
-
-    Pure (no I/O) so the retention rule is unit-tested directly; `prune` wraps it in SQL.
-    """
-    recent = today - dt.timedelta(days=_KEEP_DAILY_DAYS)
-    year = today - dt.timedelta(days=_KEEP_MONDAY_DAYS)
-    out: set[dt.date] = set()
-    for d in made_ons:
-        if d >= recent:
-            continue  # within the 15-day window: keep all
-        if d.weekday() == 0:  # Monday
-            if d < year:
-                out.add(d)  # Monday older than a year: delete
-        else:
-            out.add(d)  # non-Monday outside the window: delete
-    return out
-
-
-def _loaded_run_dates() -> set[dt.date]:
-    """Distinct `made_on` already stored for this source (drives backfill of gaps)."""
-    from sqlalchemy import select
-
-    from gasbalance_core.db import SessionLocal
-    from gasbalance_core.models import ForecastCovariate, Series
-
-    stmt = (
-        select(ForecastCovariate.made_on)
-        .join(Series, ForecastCovariate.series_id == Series.id)
-        .where(Series.source == source)
-        .distinct()
-    )
-    with SessionLocal() as session:
-        return set(session.execute(stmt).scalars().all())
+    """This connector's retention rule (shared, pure); `prune` wraps it in SQL."""
+    return vintages_to_delete(made_ons, today)
 
 
 def load(session: Session, df: pd.DataFrame, run_id: int, code_to_id: dict[str, int]) -> int:
@@ -211,7 +172,7 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
     today = dt.datetime.now(dt.UTC).date()
 
     desired = set(_desired_run_dates(today))
-    have = _loaded_run_dates()
+    have = loaded_run_dates(source)
     refresh = {today - dt.timedelta(days=i) for i in range(_REFRESH_DAYS)}
     # clamp refresh to the keep-set: never re-fetch a vintage that just aged
     # out of the window (only for prune to delete it next run)

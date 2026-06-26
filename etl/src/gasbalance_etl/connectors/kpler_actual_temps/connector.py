@@ -35,6 +35,7 @@ import aiometer
 import httpx
 import pandas as pd
 
+from gasbalance_etl.connectors._kpler_common import last_loaded_ts
 from gasbalance_etl.connectors._kpler_http import arequest
 from gasbalance_etl.connectors.kpler_actual_temps.config import KplerSettings, get_kpler_settings
 from gasbalance_etl.settings import load_series_dict
@@ -90,23 +91,6 @@ def _day_ahead_rows(run_date: dt.date, data: list[dict[str, Any]]) -> list[tuple
     ]
 
 
-def _last_loaded_day() -> dt.date | None:
-    """Latest covariate timestamp already stored for this source, as a date (or None)."""
-    from sqlalchemy import func, select
-
-    from gasbalance_core.db import SessionLocal
-    from gasbalance_core.models import Covariate, Series
-
-    stmt = (
-        select(func.max(Covariate.ts))
-        .join(Series, Covariate.series_id == Series.id)
-        .where(Series.source == source)
-    )
-    with SessionLocal() as session:
-        ts = session.execute(stmt).scalar_one_or_none()
-    return ts.date() if ts is not None else None
-
-
 async def _fetch_all(
     cfg: KplerSettings, zones: list[str], run_dates: list[dt.date]
 ) -> pd.DataFrame:
@@ -157,11 +141,11 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
     del since
     cfg = get_kpler_settings()
     zones = [e["zone"] for e in series_dict()]
-    last = _last_loaded_day()
+    last = last_loaded_ts(source)
     if last is None:
         start = _HISTORY_START
     else:
-        start = max(_HISTORY_START, last - dt.timedelta(days=_REFRESH_DAYS))
+        start = max(_HISTORY_START, last.date() - dt.timedelta(days=_REFRESH_DAYS))
     today = dt.datetime.now(dt.UTC).date()  # everything is UTC, incl. the window boundary
     if start > today:
         return pd.DataFrame(columns=["zone", "date", "value"])
