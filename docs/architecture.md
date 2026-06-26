@@ -85,6 +85,21 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     list, and `zones` is an ENTSO-E **bidding-zone** enum — Germany is `DE-LU`, not `DE`), so
     fetch issues one request per (run date × zone × fuel), **fanned out concurrently** (bounded
     by `_CONCURRENCY`). Zones in `settings/kpler_generation_forecast.yaml`. (ADR 0009.)
+  - **kpler_generation_long_term** (Kpler) — hourly forward-looking **renewable** generation
+    (MW) **climatology** per power zone, a covariate, from `…/power/generations/forecasts/long-term`
+    — the generation analogue of `kpler_long_term_temperatures`. Two flavours via
+    `baseWeatherModel`: **MEAN** (the normal) and **REF_YYYY** weather years (last 10 completed
+    years, recomputed each run). The endpoint's `fuelType` enum is exactly the three renewables —
+    **solar, wind, run-of-river** (no gas; **wind is one fuel**, no onshore/offshore split) — one
+    per request, while `zones[]` batches every area, so a run is `fuels × models` (= 3 × 11 = 33)
+    requests. 33 series per area, codes `KP.GENLT.<FUEL>.<zone>.<MODEL>`, `sub_group` = fuel
+    (`zones` is the ENTSO-E **bidding-zone** enum — Germany is `DE-LU`). HTTP Basic Auth (shared
+    Kpler key), JSON; **full refresh weekly** of the forward window `[today, +24 months]`. Unlike
+    the long-term temperatures this profile is **not** run-date-independent (it shifts by hundreds
+    of MW across run dates), so we deliberately omit `runDate` to take the **latest** run and
+    overwrite the **single-vintage `covariate`** in place — we do not vintage it (that's
+    `kpler_generation_forecast`). Validated by the shared `generation_schema` (MW band). Zones in
+    `settings/kpler_generation_long_term.yaml`. (ADR 0008.)
 - **ml/** — the data-science core. Reads clean series from Postgres, builds features
   (covariates), fits/backtests models from a registry, tracks experiments in MLflow,
   and writes forecasts back to Postgres. Models are config-selected, not hardcoded.

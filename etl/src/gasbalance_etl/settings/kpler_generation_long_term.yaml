@@ -1,0 +1,25 @@
+# Kpler long-term generation — one zone per balance area (covariate, MW).
+# Each entry maps a balance `area` to the Kpler ENTSO-E **bidding zone** we pull the forward
+# hourly renewable-generation climatology for. Like the short-term generation forecast (and
+# unlike the long-term temperatures), `zones` validates against a bidding-zone enum, so Germany
+# is **DE-LU**, not DE (plain DE 422s); all others happen to match the area code.
+# The 33 series per zone (3 fuels SOLAR/WIND/ROR x 11 models MEAN + last-10 REF) are generated in
+# `connector.series_dict()` — codes `KP.GENLT.<FUEL>.<zone>.<MODEL>` (so Germany is `...DE-LU...`).
+- {area: AT, zone: AT}
+- {area: BE, zone: BE}
+- {area: BG, zone: BG}
+- {area: CZ, zone: CZ}
+- {area: DE, zone: DE-LU}
+- {area: DK, zone: DK}
+- {area: FR, zone: FR}
+- {area: GB, zone: GB}
+- {area: GR, zone: GR}
+- {area: HR, zone: HR}
+- {area: HU, zone: HU}
+- {area: IT, zone: IT}
+- {area: LT, zone: LT}
+- {area: NL, zone: NL}
+- {area: PL, zone: PL}
+- {area: RO, zone: RO}
+- {area: SI, zone: SI}
+- {area: SK, zone: SK}
