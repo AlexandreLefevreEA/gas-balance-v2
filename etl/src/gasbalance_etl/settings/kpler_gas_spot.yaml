@@ -1,0 +1,19 @@
+# Kpler gas day-ahead spot price — one EEX day-ahead settlement series per gas market area
+# (covariate, EUR/MWh). `market_area` is the Kpler `marketArea` enum value sent per request;
+# `area` is the balance-area label. The map is identity today (area == hub code): these gas
+# hubs don't line up 1:1 with the power zones, so we keep the hub namespace explicit and remap
+# downstream in ml/ when a join needs it (mirrors kpler_power_demand.yaml).
+# Only the EUR/MWh hubs that publish a day-ahead "DAY 1 MW" price are listed. Deliberately
+# excluded: NBP (priced in p/therm), and GPL, NCG, ZEE (no day-ahead returned).
+# One series per hub (code KP.GASSPOT.<market_area>) is generated in connector.series_dict().
+- {area: TTF, market_area: TTF}          # Netherlands (the EU benchmark)
+- {area: THE, market_area: THE}          # Germany (Trading Hub Europe)
+- {area: PEG, market_area: PEG}          # France
+- {area: PVB, market_area: PVB}          # Spain
+- {area: CEGH, market_area: CEGH}        # Austria (CEGH VTP)
+- {area: OTE, market_area: OTE}          # Czechia (CZ VTP)
+- {area: ZTP, market_area: ZTP}          # Belgium (ZTP)
+- {area: FIN, market_area: FIN}          # Finland
+- {area: LTU, market_area: LTU}          # Lithuania
+- {area: LVA-EST, market_area: LVA-EST}  # Latvia-Estonia
+- {area: ETF, market_area: ETF}          # ETF
