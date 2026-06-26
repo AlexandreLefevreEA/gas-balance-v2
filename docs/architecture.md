@@ -70,6 +70,21 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     the `load` hook. We store raw hourly UTC; the EU **gas-day (06:00 CET)** aggregation is
     applied downstream in `ml/` (Kpler's own `daily` is calendar-day, the wrong boundary).
     Zones in `settings/kpler_generation_actual.yaml`. (ADR 0008.)
+  - **kpler_generation_forecast** (Kpler) — the **forecast** counterpart of
+    `kpler_generation_actual`, kept per vintage, from `…/power/generations/forecasts`. Same
+    four fuels (**solar, wind, run-of-river, gas**; `wind onshore` + `wind offshore` folded)
+    and the two 00z models of `kpler_temps_forecast` — **EC_AIFS_ENS** (~15-day) and **EC_46**
+    (46-day, ~1-day publish lag); one series per (zone × fuel × model), codes
+    `KP.GENFC.<FUEL>.<zone>.<MODEL>`, `sub_group` = fuel. Like `kpler_temps_forecast` it has a
+    **vintage** dimension, so it lands in **`forecast_covariate`** keyed `(series_id, made_on,
+    ts)`, validated by `forecast_covariate_generation_schema` (`unique(made_on, date,
+    series_id)`). **Self-managing & backfills** the keep-set (floored at `_HISTORY_START`
+    ≈ Jan 2026, where the data begins) + a refresh overlap; same **retention** (last 15 days +
+    every Monday for a year) via the `load` hook and `etl prune kpler_generation_forecast`.
+    The endpoint takes **one zone + one fuelType per request** (`run=00z`; only `models` is a
+    list, and `zones` is an ENTSO-E **bidding-zone** enum — Germany is `DE-LU`, not `DE`), so
+    fetch issues one request per (run date × zone × fuel), **fanned out concurrently** (bounded
+    by `_CONCURRENCY`). Zones in `settings/kpler_generation_forecast.yaml`. (ADR 0009.)
 - **ml/** — the data-science core. Reads clean series from Postgres, builds features
   (covariates), fits/backtests models from a registry, tracks experiments in MLflow,
   and writes forecasts back to Postgres. Models are config-selected, not hardcoded.

@@ -18,6 +18,7 @@ from typing import Any
 from gasbalance_etl.connectors.ce import connector as _ce
 from gasbalance_etl.connectors.kpler_actual_temps import connector as _kpler
 from gasbalance_etl.connectors.kpler_generation_actual import connector as _kpler_gen
+from gasbalance_etl.connectors.kpler_generation_forecast import connector as _kpler_gen_fc
 from gasbalance_etl.connectors.kpler_long_term_temperatures import connector as _kpler_lt
 from gasbalance_etl.connectors.kpler_temps_forecast import connector as _kpler_fc
 from gasbalance_etl.transforms import derived as _derived
@@ -26,6 +27,7 @@ REGISTRY: dict[str, Any] = {
     _ce.source: _ce,
     _kpler.source: _kpler,
     _kpler_gen.source: _kpler_gen,
+    _kpler_gen_fc.source: _kpler_gen_fc,
     _kpler_lt.source: _kpler_lt,
     _kpler_fc.source: _kpler_fc,
     _derived.source: _derived,  # keep last: reads what the raw sources loaded

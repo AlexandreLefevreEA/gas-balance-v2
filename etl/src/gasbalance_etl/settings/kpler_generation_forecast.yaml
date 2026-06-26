@@ -1,0 +1,27 @@
+# Kpler generation forecasts — one zone per balance area (forecast covariate, MW).
+# Each entry maps a balance `area` to the Kpler ENTSO-E **bidding zone** we pull 00z forecast
+# runs for. This endpoint validates `zones` against a bidding-zone enum, which is NOT the same
+# as the `fuel-types` (actual) endpoint's country codes — Germany is **DE-LU** here, not DE
+# (Luxembourg is coupled into the German market zone). All others happen to match the area code.
+# The map is explicit so such source quirks (and split countries, e.g. IT-NORTH) are remapped
+# without touching code. The 8 series per zone (4 fuels SOLAR/WIND/ROR/GAS x 2 models
+# EC_AIFS_ENS/EC_46) are generated in `connector.series_dict()` — codes
+# `KP.GENFC.<FUEL>.<zone>.<MODEL>` (so Germany is `...DE-LU...`).
+- {area: AT, zone: AT}
+- {area: BE, zone: BE}
+- {area: BG, zone: BG}
+- {area: CZ, zone: CZ}
+- {area: DE, zone: DE-LU}
+- {area: DK, zone: DK}
+- {area: FR, zone: FR}
+- {area: GB, zone: GB}
+- {area: GR, zone: GR}
+- {area: HR, zone: HR}
+- {area: HU, zone: HU}
+- {area: IT, zone: IT}
+- {area: LT, zone: LT}
+- {area: NL, zone: NL}
+- {area: PL, zone: PL}
+- {area: RO, zone: RO}
+- {area: SI, zone: SI}
+- {area: SK, zone: SK}
