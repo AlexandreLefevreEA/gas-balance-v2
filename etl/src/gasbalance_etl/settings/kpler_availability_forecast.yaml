@@ -1,0 +1,24 @@
+# Kpler plant-availability vintages — 4 fuel series per balance area (forecast covariate, MW).
+# The `asOf` snapshots of the forward availability view (`made_on` = asOf). Same endpoint and
+# plain **country codes** as `kpler_availability` (Germany is `DE`, not `DE-LU`) — identity map,
+# explicit so a split country could be remapped without touching code.
+# The 4 fuel series per zone (COAL + GAS + LIGNITE + NUCLEAR) are generated in
+# `connector.series_dict()` — codes `KP.AVAILFC.<FUEL>.<zone>`.
+- {area: AT, zone: AT}
+- {area: BE, zone: BE}
+- {area: BG, zone: BG}
+- {area: CZ, zone: CZ}
+- {area: DE, zone: DE}
+- {area: DK, zone: DK}
+- {area: FR, zone: FR}
+- {area: GB, zone: GB}
+- {area: GR, zone: GR}
+- {area: HR, zone: HR}
+- {area: HU, zone: HU}
+- {area: IT, zone: IT}
+- {area: LT, zone: LT}
+- {area: NL, zone: NL}
+- {area: PL, zone: PL}
+- {area: RO, zone: RO}
+- {area: SI, zone: SI}
+- {area: SK, zone: SK}

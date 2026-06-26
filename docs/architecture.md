@@ -101,6 +101,33 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     overwrite the **single-vintage `covariate`** in place — we do not vintage it (that's
     `kpler_generation_forecast`). Validated by the shared `generation_schema` (MW band). Zones in
     `settings/kpler_generation_long_term.yaml`. (ADR 0008.)
+  - **kpler_availability** (Kpler) — daily actual plant **availability** (available capacity, MW)
+    by fuel per country, an exogenous **covariate** for gas-for-power demand (when nuclear/coal
+    capacity is out, gas fills the gap), from `…/power/outages/availability/fuel-types`. Four
+    thermal fuels — **coal, gas, lignite, nuclear**; 4 series per area, codes
+    `KP.AVAIL.{COAL,GAS,LIGNITE,NUCLEAR}.<zone>`, `sub_group` = fuel. We keep the `central`
+    estimate (the feed's `low`/`high` band, populated only for a few major markets, is skipped).
+    HTTP Basic Auth (shared Kpler key), JSON; **incremental** (self-managed from the last loaded
+    timestamp; first run backfills from 2016 in 365-day chunks, all zones × fuels per request,
+    **fanned out concurrently**). `zones` + `fuelTypes` batch in one request and `zones` is the
+    **country-code** enum — `DE`, not `DE-LU`. **`asOf` is the vintage param; omitting it returns
+    the latest snapshot** = the realized "actual" of past dates (the forward/vintaged view is
+    `kpler_availability_forecast`). Daily → lands in the `covariate` table via the `load` hook.
+    Validated by `availability_schema` (a non-negative MW band — availability is genuinely ≥ 0).
+    Zones in `settings/kpler_availability.yaml`. (ADR 0008.)
+  - **kpler_availability_forecast** (Kpler) — the **forecast** counterpart of
+    `kpler_availability`, kept per vintage, from the same `…/power/outages/availability/fuel-types`
+    with the **`asOf`** param. Each `asOf` snapshot captures the planned-outage outlook (delivery
+    dates from `asOf` forward over a `_HORIZON_DAYS` ≈ 12-month window); 4 series per area, codes
+    `KP.AVAILFC.{COAL,GAS,LIGNITE,NUCLEAR}.<zone>`, `sub_group` = fuel (**no model dimension**).
+    The **vintage** is `asOf`, so rows land in **`forecast_covariate`** keyed `(series_id, made_on,
+    ts)`, validated by `forecast_covariate_availability_schema` (`unique(made_on, date,
+    series_id)`). **Self-managing & backfills** the keep-set (no history floor — `asOf` snapshots
+    go back to ~2024, past the trailing-year keep-set) + a refresh overlap; same **retention**
+    (last 15 days + every Monday for a year) via the `load` hook and `etl prune
+    kpler_availability_forecast`. `zones` + `fuelTypes` batch in one request, so a run is **one
+    request per `asOf`**, **fanned out concurrently** (bounded by `_CONCURRENCY`). Zones in
+    `settings/kpler_availability_forecast.yaml`. (ADR 0009.)
   - **kpler_power_demand** (Kpler) — hourly actual electricity **demand** (total system load,
     MW) per power zone, an exogenous **covariate** for gas-for-power demand (high load → more
     gas plants run), from `…/power/loads/actual`. One series per area, code `KP.LOAD.<zone>`,
