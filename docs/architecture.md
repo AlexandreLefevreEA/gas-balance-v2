@@ -129,6 +129,23 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     (plain country codes — `DE`, not `DE-LU`), so fetch issues **one request per run date**,
     **fanned out concurrently** (bounded by `_CONCURRENCY`). Zones in
     `settings/kpler_power_demand_forecast.yaml`. (ADR 0009.)
+  - **kpler_power_demand_long_term** (Kpler) — hourly forward-looking electricity **demand**
+    (total system load, MW) **climatology** per power zone, a covariate, from
+    `…/power/loads/forecasts/long-term` — the demand analogue of `kpler_long_term_temperatures`.
+    Two flavours via `baseWeatherModel`: **MEAN** (the normal) and **REF_YYYY** weather years
+    (last 10 completed years, recomputed each run). `zones[]` batches every area in one request, so
+    a run is `len(models)` (= 11) requests, **fanned out concurrently** (bounded by
+    `_CONCURRENCY`). 11 series per area, codes `KP.LOADLT.<zone>.<MODEL>`, `sub_group` = `demand`
+    (lines up with the actual `KP.LOAD.<zone>` and forecast `KP.LOADFC.<zone>.<MODEL>`). Unlike the
+    short-term `/power/loads/forecasts`, this endpoint takes **no `loadType`** (total demand only)
+    and `zones` is the **country-code** enum — Germany is `DE`, not `DE-LU` (both verified live).
+    HTTP Basic Auth (shared Kpler key), JSON; **full refresh weekly** of the forward window
+    `[today, +24 months]`. Like the long-term generation (and unlike the long-term temperatures)
+    this profile is **not** run-date-independent (MEAN shifts by hundreds of MW across run dates),
+    so we deliberately omit `runDate` to take the **latest** run and overwrite the **single-vintage
+    `covariate`** in place — we do not vintage it (that's `kpler_power_demand_forecast`). Validated
+    by the shared `demand_schema` (MW band). Zones in
+    `settings/kpler_power_demand_long_term.yaml`. (ADR 0008.)
 - **ml/** — the data-science core. Reads clean series from Postgres, builds features
   (covariates), fits/backtests models from a registry, tracks experiments in MLflow,
   and writes forecasts back to Postgres. Models are config-selected, not hardcoded.

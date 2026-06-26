@@ -23,6 +23,7 @@ from gasbalance_etl.connectors.kpler_generation_long_term import connector as _k
 from gasbalance_etl.connectors.kpler_long_term_temperatures import connector as _kpler_lt
 from gasbalance_etl.connectors.kpler_power_demand import connector as _kpler_demand
 from gasbalance_etl.connectors.kpler_power_demand_forecast import connector as _kpler_demand_fc
+from gasbalance_etl.connectors.kpler_power_demand_long_term import connector as _kpler_demand_lt
 from gasbalance_etl.connectors.kpler_temps_forecast import connector as _kpler_fc
 from gasbalance_etl.transforms import derived as _derived
 
@@ -36,5 +37,6 @@ REGISTRY: dict[str, Any] = {
     _kpler_fc.source: _kpler_fc,
     _kpler_demand.source: _kpler_demand,
     _kpler_demand_fc.source: _kpler_demand_fc,
+    _kpler_demand_lt.source: _kpler_demand_lt,
     _derived.source: _derived,  # keep last: reads what the raw sources loaded
 }
