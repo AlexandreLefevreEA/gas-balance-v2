@@ -49,6 +49,17 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     JSON; **full refresh weekly** of the forward window `[today, +24 months]` (profiles are
     run-date-independent, so `runDate` is omitted). Hourly → lands in the `covariate` table
     via the `load` hook. Zones in `settings/kpler_long_term_temperatures.yaml`. (ADR 0008.)
+  - **kpler_temps_forecast** (Kpler) — hourly temperature **forecasts** per power zone, the
+    first **forecast covariate**, from the base `…/forecasts/temperature` endpoint. Two 00z
+    models — **EC_AIFS_ENS** (AI ensemble, ~15-day) and **EC_46** (46-day extended) —
+    ensemble-mean value; 2 series per area, codes `KP.TEMPFC.<zone>.<MODEL>`. A forecast has
+    a **vintage** dimension (`runDate`) the actuals don't, so it lands in a new
+    **`forecast_covariate`** table keyed `(series_id, made_on, ts)`, validated by
+    `forecast_covariate_temperature_schema` (`unique(made_on, date, series_id)`) — see ADR
+    0009. **Self-managing & backfills**: each run fetches the desired keep-set of run dates
+    not already stored (+ a recent refresh overlap). A **retention** rule (keep last 15 days
+    of runs + every Monday for 1 year) runs in the `load` hook and via `etl prune
+    kpler_temps_forecast`. Zones in `settings/kpler_temps_forecast.yaml`. (ADR 0009.)
 - **ml/** — the data-science core. Reads clean series from Postgres, builds features
   (covariates), fits/backtests models from a registry, tracks experiments in MLflow,
   and writes forecasts back to Postgres. Models are config-selected, not hardcoded.

@@ -35,6 +35,7 @@ import aiometer
 import httpx
 import pandas as pd
 
+from gasbalance_etl.connectors._kpler_http import arequest
 from gasbalance_etl.connectors.kpler_actual_temps.config import KplerSettings, get_kpler_settings
 from gasbalance_etl.settings import load_series_dict
 from gasbalance_etl.validation.temperature import temperature_schema
@@ -59,7 +60,6 @@ _REFRESH_DAYS = 5
 # we still retry 429/5xx with backoff rather than aborting the whole run.
 _MAX_PER_SECOND = 25  # 1500/min, headroom under the 2000/min cap
 _MAX_CONCURRENCY = 12
-_MAX_RETRIES = 6
 
 
 def series_dict() -> list[dict[str, Any]]:
@@ -107,38 +107,6 @@ def _last_loaded_day() -> dt.date | None:
     return ts.date() if ts is not None else None
 
 
-def _retry_after(resp: httpx.Response, attempt: int) -> float:
-    """Seconds to wait before retrying — honour retry-after / ratelimit-reset, else backoff."""
-    raw = resp.headers.get("retry-after") or resp.headers.get("ratelimit-reset")
-    try:
-        secs = float(raw) if raw else 2.0**attempt
-    except ValueError:  # retry-after as an HTTP-date — just back off
-        secs = 2.0**attempt
-    return min(secs, 60.0)
-
-
-async def _request(client: httpx.AsyncClient, params: dict[str, Any]) -> httpx.Response:
-    """GET, retrying 429/5xx with backoff; raises (fails loudly) only once retries run out."""
-    resp = None
-    for attempt in range(_MAX_RETRIES):
-        resp = await client.get(_ENDPOINT, params=params)
-        if resp.status_code != 429 and resp.status_code < 500:
-            resp.raise_for_status()
-            return resp
-        wait = _retry_after(resp, attempt)
-        log.warning(
-            "kpler: HTTP %d; backing off %.0fs (attempt %d/%d)",
-            resp.status_code,
-            wait,
-            attempt + 1,
-            _MAX_RETRIES,
-        )
-        await asyncio.sleep(wait)
-    assert resp is not None
-    resp.raise_for_status()  # retries exhausted -> surface the last transient error
-    return resp
-
-
 async def _fetch_all(
     cfg: KplerSettings, zones: list[str], run_dates: list[dt.date]
 ) -> pd.DataFrame:
@@ -150,8 +118,9 @@ async def _fetch_all(
     ) as client:
 
         async def _one(run_date: dt.date) -> list[tuple[str, str, float]]:
-            resp = await _request(
+            resp = await arequest(
                 client,
+                _ENDPOINT,
                 {
                     "runDate": run_date.isoformat(),
                     "run": "00z",
@@ -160,6 +129,7 @@ async def _fetch_all(
                     "granularity": "hourly",
                     "timezone": "UTC",
                 },
+                label="kpler",
             )
             return _day_ahead_rows(run_date, resp.json().get("data", []))
 

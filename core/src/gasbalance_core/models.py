@@ -146,6 +146,38 @@ class Covariate(Base):
     __table_args__ = (CheckConstraint(_FINITE, name="ck_covariate_value_finite"),)
 
 
+class ForecastCovariate(Base):
+    """Forecast covariates — hourly exogenous drivers kept **per vintage**.
+
+    Like `Covariate`, but the PK adds `made_on` (the forecast run date), so every daily
+    vintage of the same delivery hour is retained instead of overwritten — the store for
+    multi-run weather forecasts (e.g. Kpler `EC_AIFS_ENS` / `EC_46`) feeding the model.
+    A connector-side retention policy prunes old vintages so volume stays bounded.
+    See ADR 0009.
+    """
+
+    __tablename__ = "forecast_covariate"
+
+    series_id: Mapped[int] = mapped_column(
+        ForeignKey(Series.id, name="fk_forecast_covariate_series"), primary_key=True
+    )
+    made_on: Mapped[dt.date] = mapped_column(Date, primary_key=True)
+    ts: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    value: Mapped[float] = mapped_column(Double, nullable=False)
+    run_id: Mapped[int | None] = mapped_column(
+        ForeignKey(EtlRun.run_id, name="fk_forecast_covariate_etl_run")
+    )
+    loaded_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        CheckConstraint(_FINITE, name="ck_forecast_covariate_value_finite"),
+        # Read path: latest vintage of a series at a delivery hour.
+        Index("ix_forecast_covariate_latest", "series_id", "ts", "made_on"),
+    )
+
+
 class Forecast(Base):
     """Forecasts — one vintage per made_on day; a new run overrides that day."""
 

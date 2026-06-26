@@ -27,12 +27,12 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
-import time
 from typing import TYPE_CHECKING, Any
 
 import httpx
 import pandas as pd
 
+from gasbalance_etl.connectors._kpler_http import request
 from gasbalance_etl.connectors.kpler_actual_temps.config import get_kpler_settings
 from gasbalance_etl.settings import load_series_dict
 from gasbalance_etl.validation.temperature import temperature_schema
@@ -49,7 +49,6 @@ schema = temperature_schema
 _ENDPOINT = "power/loads/forecasts/temperature/long-term"
 _HORIZON_MONTHS = 24  # forward window pulled each run (user-chosen)
 _N_REF_YEARS = 10  # number of trailing weather years (REF_YYYY) to pull
-_MAX_RETRIES = 6
 
 
 def _models() -> list[str]:
@@ -96,38 +95,6 @@ def load(session: Session, df: pd.DataFrame, run_id: int, code_to_id: dict[str, 
     return upsert_covariates(session, df, run_id, code_to_id)
 
 
-def _retry_after(resp: httpx.Response, attempt: int) -> float:
-    """Seconds to wait before retrying — honour retry-after / ratelimit-reset, else backoff."""
-    raw = resp.headers.get("retry-after") or resp.headers.get("ratelimit-reset")
-    try:
-        secs = float(raw) if raw else 2.0**attempt
-    except ValueError:  # retry-after as an HTTP-date — just back off
-        secs = 2.0**attempt
-    return min(secs, 60.0)
-
-
-def _request(client: httpx.Client, params: dict[str, Any]) -> httpx.Response:
-    """GET, retrying 429/5xx with backoff; raises (fails loudly) only once retries run out."""
-    resp = None
-    for attempt in range(_MAX_RETRIES):
-        resp = client.get(_ENDPOINT, params=params)
-        if resp.status_code != 429 and resp.status_code < 500:
-            resp.raise_for_status()
-            return resp
-        wait = _retry_after(resp, attempt)
-        log.warning(
-            "kpler-lt: HTTP %d; backing off %.0fs (attempt %d/%d)",
-            resp.status_code,
-            wait,
-            attempt + 1,
-            _MAX_RETRIES,
-        )
-        time.sleep(wait)
-    assert resp is not None
-    resp.raise_for_status()  # retries exhausted -> surface the last transient error
-    return resp
-
-
 def fetch(since: dt.date | None = None) -> pd.DataFrame:
     """Full refresh: pull the forward [today, today+24mo] hourly profile for every model.
 
@@ -151,8 +118,9 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
         timeout=180.0,
     ) as client:
         for m in models:
-            resp = _request(
+            resp = request(
                 client,
+                _ENDPOINT,
                 {
                     "zones": zones,
                     "baseWeatherModel": m,  # MEAN / REF_YYYY — not echoed in the response
@@ -162,6 +130,7 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
                     "endDate": end.isoformat(),
                     # runDate omitted -> latest run (profiles are run-date-independent)
                 },
+                label="kpler-lt",
             )
             rows.extend(
                 (d["zone"], m, d["startDate"], d["value"])

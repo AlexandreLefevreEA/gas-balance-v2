@@ -64,6 +64,20 @@ def _run_one(name: str, conn: Any) -> int:
         session.close()
 
 
+def _prune_one(name: str) -> int:
+    """Apply a connector's retention policy, if it declares one (`prune` hook)."""
+    conn = REGISTRY[name]
+    prune = getattr(conn, "prune", None)
+    if prune is None:
+        log.warning("%s has no retention policy; nothing to prune", name)
+        return 0
+    with SessionLocal() as session:
+        deleted = prune(session)
+        session.commit()
+    log.info("%s: pruned %d rows", name, deleted)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
@@ -72,7 +86,15 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
     run_p = sub.add_parser("run", help="run a connector (or 'all')")
     run_p.add_argument("source", help="connector name or 'all'")
+    prune_p = sub.add_parser("prune", help="apply a connector's retention policy")
+    prune_p.add_argument("source", help="connector name")
     args = parser.parse_args(argv)
+
+    if args.cmd == "prune":
+        if args.source not in REGISTRY:
+            known = ", ".join(REGISTRY) or "(none)"
+            parser.error(f"unknown source '{args.source}'. Known: {known}")
+        return _prune_one(args.source)
 
     if args.source != "all" and args.source not in REGISTRY:
         known = ", ".join(REGISTRY) or "(none)"
