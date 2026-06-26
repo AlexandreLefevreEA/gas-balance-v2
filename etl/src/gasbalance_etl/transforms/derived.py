@@ -49,6 +49,7 @@ def _catalog(session: Session) -> dict[str, dict[str, Any]]:
         Series.is_derived.is_(False)
     )
     return {
+        # ORM `category` maps back to canonical `group` (renamed: `group` is a SQL reserved word)
         code: {"group": cat, "sub_group": sg, "area": ar}
         for code, cat, sg, ar in session.execute(stmt).all()
     }
