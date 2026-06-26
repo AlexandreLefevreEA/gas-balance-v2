@@ -10,7 +10,7 @@ dependencies = [
   "httpx>=0.27",
   "aiometer>=0.5",  # async concurrency + rate limiting (Kpler backfill)
   "pyyaml>=6",
-  "scipy>=1.13",  # cubic-spline carbon forward curve (no stdlib equivalent)
+  "scipy>=1.13",  # cubic-spline forward curves: carbon (EUA) + EQ coal settles -> daily
   # sqlalchemy + pydantic-settings come transitively via gasbalance-core
 ]
 

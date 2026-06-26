@@ -251,6 +251,20 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     days + every Monday for a year; history begins ~2023, weekend/holiday dates have no
     settlement). Validated by `forecast_covariate_power_price_schema` (EUR/MWh band). Zones in
     `settings/kpler_power_forward_curve.yaml`. (ADR 0009.)
+  - **eq_coal_curve** (Energy Quantified) — daily coal **forward curve** (USD/t) for ICE
+    **Coal API-2 (CIF ARA)**, a forecast **covariate** for gas-for-power demand (coal-vs-gas
+    switching drives gas dispatch), from `…/ohlc/{curve}/latest/?date=<tradingDate>`. EQ returns
+    the **discrete futures ladder** (month/quarter/season/year) per trading date, not a daily
+    curve, so unlike the Kpler forward curves we keep the **monthly** strip (~4 years out) and
+    **cubic-spline its settlements onto a daily grid** (`scipy`, natural spline through each
+    month's mid-delivery point; no extrapolation past the strip). One series, code
+    `EQ.COALFC.API2`, `sub_group` = `USD/t`. Auth is the **`X-API-Key`** header (`EQ_API_KEY`),
+    JSON; **self-managing & backfills** the forecast keep-set of trading dates (+ a 3-day refresh),
+    weekday-only. **`made_on` is the response's `traded_at`**, not the requested date — a
+    weekend/holiday request returns the prior trading day's curve, so it re-confirms an existing
+    vintage instead of duplicating it. Rows land in the vintage-keyed `forecast_covariate` (keep
+    all of the last 15 days + every Monday for a year). Validated by
+    `forecast_covariate_coal_price_schema` (USD/t band). (ADR 0009.)
   - **kpler_power_spot** (Kpler) — hourly actual **day-ahead electricity spot price**
     (EUR/MWh) per power zone, an exogenous **covariate** for gas-for-power demand (high power
     prices → gas plants are in the money and run), from `…/power/prices/day-ahead`. One series
