@@ -1,0 +1,14 @@
+# Kpler gas forward curves — one series per gas hub (forecast covariate, daily forward price).
+# Each entry is a `marketAreas` hub the connector batches into one request per trading date; the
+# hub's quote `currency` is carried in `sub_group` (continental hubs EUR/MWh, NBP GBX/thm). The
+# single series per hub is generated in `connector.series_dict()`; codes KP.GASFC.<hub>.
+# ETF is in the API enum but returns no data yet — add it here when Kpler populates it.
+- {hub: TTF,  currency: EUR/MWh}   # NL, the EU benchmark
+- {hub: THE,  currency: EUR/MWh}   # DE
+- {hub: PEG,  currency: EUR/MWh}   # FR
+- {hub: PVB,  currency: EUR/MWh}   # ES
+- {hub: ZTP,  currency: EUR/MWh}   # BE
+- {hub: PSV,  currency: EUR/MWh}   # IT
+- {hub: CEGH, currency: EUR/MWh}   # AT
+- {hub: CZ,   currency: EUR/MWh}   # CZ
+- {hub: NBP,  currency: GBX/thm}   # UK

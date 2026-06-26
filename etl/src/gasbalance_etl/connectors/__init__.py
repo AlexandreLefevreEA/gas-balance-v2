@@ -23,6 +23,7 @@ from gasbalance_etl.connectors.kpler_availability import connector as _kpler_ava
 from gasbalance_etl.connectors.kpler_availability_forecast import connector as _kpler_avail_fc
 from gasbalance_etl.connectors.kpler_carbon_settles import connector as _kpler_carbon_settles
 from gasbalance_etl.connectors.kpler_carbon_spot import connector as _kpler_carbon
+from gasbalance_etl.connectors.kpler_gas_forward_curve import connector as _kpler_gas_fc
 from gasbalance_etl.connectors.kpler_gas_spot import connector as _kpler_gas_spot
 from gasbalance_etl.connectors.kpler_generation_actual import connector as _kpler_gen
 from gasbalance_etl.connectors.kpler_generation_forecast import connector as _kpler_gen_fc
@@ -46,6 +47,7 @@ REGISTRY: dict[str, Any] = {
     _kpler_avail_fc.source: _kpler_avail_fc,
     _kpler_carbon.source: _kpler_carbon,
     _kpler_carbon_settles.source: _kpler_carbon_settles,
+    _kpler_gas_fc.source: _kpler_gas_fc,
     _kpler_gas_spot.source: _kpler_gas_spot,
     _kpler_gen.source: _kpler_gen,
     _kpler_gen_fc.source: _kpler_gen_fc,

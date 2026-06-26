@@ -9,9 +9,9 @@ non-forecast schema: `temperature_schema` ([-60, 60] °C) for temperature foreca
 for power price-forward-curve forecasts, `availability_schema` ([0, 200_000] MW) for
 plant-availability vintages (`made_on` = the `asOf` snapshot date), `carbon_schema`
 ([0, 1000] EUR/tCO2) for the carbon (EUA) futures-settlement anchors and the spline forward
-curve, and `coal_schema` ([0, 1000] USD/t) for the coal forward curve (`made_on` = the trading
-date). Used by forecast connectors that load into the vintage-keyed `forecast_covariate`
-table. See ADR 0009.
+curve, `coal_schema` ([0, 1000] USD/t) for the coal forward curve (`made_on` = the trading
+date), and `gas_price_schema` ([-50, 3000] EUR/MWh or GBX/thm) for gas forward curves. Used by
+forecast connectors that load into the vintage-keyed `forecast_covariate` table. See ADR 0009.
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ from gasbalance_etl.validation.availability import availability_schema
 from gasbalance_etl.validation.carbon import carbon_schema
 from gasbalance_etl.validation.coal import coal_schema
 from gasbalance_etl.validation.demand import demand_schema
+from gasbalance_etl.validation.gas_price import gas_price_schema
 from gasbalance_etl.validation.generation import generation_schema
 from gasbalance_etl.validation.price import price_schema
 from gasbalance_etl.validation.temperature import temperature_schema
@@ -92,12 +93,22 @@ forecast_covariate_carbon_schema = pa.DataFrameSchema(
     strict=False,
 )
 
-
 forecast_covariate_coal_price_schema = pa.DataFrameSchema(
     name="forecast_covariate_coal_price",
     columns={
         **coal_schema.columns,
         "made_on": pa.Column("datetime64[ns]", nullable=False),  # the trading date (vintage)
+    },
+    unique=["made_on", "date", "series_id"],  # a vintage, a delivery day, a series
+    coerce=True,
+    strict=False,
+)
+
+forecast_covariate_gas_price_schema = pa.DataFrameSchema(
+    name="forecast_covariate_gas_price",
+    columns={
+        **gas_price_schema.columns,
+        "made_on": pa.Column("datetime64[ns]", nullable=False),  # the curve's trading date
     },
     unique=["made_on", "date", "series_id"],  # a vintage, a delivery day, a series
     coerce=True,

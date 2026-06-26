@@ -280,6 +280,19 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     `covariate` table via the `load` hook; raw hourly UTC stored, gas-day aggregation applied
     downstream in `ml/`. Validated by `spot_price_schema` (EUR/MWh band). Zones in
     `settings/kpler_power_spot.yaml`. (ADR 0008.)
+  - **kpler_gas_forward_curve** (Kpler) — the daily **forward gas-price curve** per EU gas hub, a
+    **forecast covariate** (gas price drives demand), from `…/power/prices/price-forward-curve/gas`.
+    One value per delivery day (the curve runs several years out); one series per hub, codes
+    `KP.GASFC.<hub>`, `sub_group` = the quote currency (continental hubs **EUR/MWh**, **NBP** in
+    **GBX/thm**). A curve has a **vintage** dimension (`tradingDate`), so it lands in
+    **`forecast_covariate`** keyed `(series_id, made_on, ts)`, validated by
+    `forecast_covariate_gas_price_schema` (`unique(made_on, date, series_id)`). **Self-managing &
+    backfills** the keep-set (filtered to **weekdays** — gas doesn't trade weekends; no history
+    floor — the curve reaches back ~early 2025, covering the trailing year) + a refresh overlap;
+    same **retention** (last 15 days + every Monday for a year) via the `load` hook and `etl prune
+    kpler_gas_forward_curve`. Required params are `tradingDate` and `marketAreas`; **`marketAreas`
+    batches every hub into one request per trading date**, **fanned out concurrently** (bounded by
+    `_CONCURRENCY`). Hubs in `settings/kpler_gas_forward_curve.yaml`. (ADR 0009.)
 - **ml/** — the data-science core. Reads clean series from Postgres, builds features
   (covariates), fits/backtests models from a registry, tracks experiments in MLflow,
   and writes forecasts back to Postgres. Models are config-selected, not hardcoded.
