@@ -60,6 +60,16 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     not already stored (+ a recent refresh overlap). A **retention** rule (keep last 15 days
     of runs + every Monday for 1 year) runs in the `load` hook and via `etl prune
     kpler_temps_forecast`. Zones in `settings/kpler_temps_forecast.yaml`. (ADR 0009.)
+  - **kpler_generation_actual** (Kpler) — hourly actual power generation (MW) by fuel per
+    power zone, an exogenous **covariate** for gas-for-power demand, from
+    `…/power/generations/fuel-types`. Four fuels — **solar, wind, run-of-river, gas** (Kpler's
+    `wind onshore` + `wind offshore` are summed into one WIND series); 4 series per area,
+    codes `KP.GEN.{SOLAR,WIND,ROR,GAS}.<zone>`. HTTP Basic Auth (shared Kpler key), JSON;
+    **incremental** (self-managed from the last loaded timestamp; first run backfills from
+    2015 in 90-day chunks, all zones per request). Hourly → lands in the `covariate` table via
+    the `load` hook. We store raw hourly UTC; the EU **gas-day (06:00 CET)** aggregation is
+    applied downstream in `ml/` (Kpler's own `daily` is calendar-day, the wrong boundary).
+    Zones in `settings/kpler_generation_actual.yaml`. (ADR 0008.)
 - **ml/** — the data-science core. Reads clean series from Postgres, builds features
   (covariates), fits/backtests models from a registry, tracks experiments in MLflow,
   and writes forecasts back to Postgres. Models are config-selected, not hardcoded.
