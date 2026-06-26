@@ -101,6 +101,33 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     overwrite the **single-vintage `covariate`** in place — we do not vintage it (that's
     `kpler_generation_forecast`). Validated by the shared `generation_schema` (MW band). Zones in
     `settings/kpler_generation_long_term.yaml`. (ADR 0008.)
+  - **kpler_availability** (Kpler) — daily actual plant **availability** (available capacity, MW)
+    by fuel per country, an exogenous **covariate** for gas-for-power demand (when nuclear/coal
+    capacity is out, gas fills the gap), from `…/power/outages/availability/fuel-types`. Four
+    thermal fuels — **coal, gas, lignite, nuclear**; 4 series per area, codes
+    `KP.AVAIL.{COAL,GAS,LIGNITE,NUCLEAR}.<zone>`, `sub_group` = fuel. We keep the `central`
+    estimate (the feed's `low`/`high` band, populated only for a few major markets, is skipped).
+    HTTP Basic Auth (shared Kpler key), JSON; **incremental** (self-managed from the last loaded
+    timestamp; first run backfills from 2016 in 365-day chunks, all zones × fuels per request,
+    **fanned out concurrently**). `zones` + `fuelTypes` batch in one request and `zones` is the
+    **country-code** enum — `DE`, not `DE-LU`. **`asOf` is the vintage param; omitting it returns
+    the latest snapshot** = the realized "actual" of past dates (the forward/vintaged view is
+    `kpler_availability_forecast`). Daily → lands in the `covariate` table via the `load` hook.
+    Validated by `availability_schema` (a non-negative MW band — availability is genuinely ≥ 0).
+    Zones in `settings/kpler_availability.yaml`. (ADR 0008.)
+  - **kpler_availability_forecast** (Kpler) — the **forecast** counterpart of
+    `kpler_availability`, kept per vintage, from the same `…/power/outages/availability/fuel-types`
+    with the **`asOf`** param. Each `asOf` snapshot captures the planned-outage outlook (delivery
+    dates from `asOf` forward over a `_HORIZON_DAYS` ≈ 12-month window); 4 series per area, codes
+    `KP.AVAILFC.{COAL,GAS,LIGNITE,NUCLEAR}.<zone>`, `sub_group` = fuel (**no model dimension**).
+    The **vintage** is `asOf`, so rows land in **`forecast_covariate`** keyed `(series_id, made_on,
+    ts)`, validated by `forecast_covariate_availability_schema` (`unique(made_on, date,
+    series_id)`). **Self-managing & backfills** the keep-set (no history floor — `asOf` snapshots
+    go back to ~2024, past the trailing-year keep-set) + a refresh overlap; same **retention**
+    (last 15 days + every Monday for a year) via the `load` hook and `etl prune
+    kpler_availability_forecast`. `zones` + `fuelTypes` batch in one request, so a run is **one
+    request per `asOf`**, **fanned out concurrently** (bounded by `_CONCURRENCY`). Zones in
+    `settings/kpler_availability_forecast.yaml`. (ADR 0009.)
   - **kpler_power_demand** (Kpler) — hourly actual electricity **demand** (total system load,
     MW) per power zone, an exogenous **covariate** for gas-for-power demand (high load → more
     gas plants run), from `…/power/loads/actual`. One series per area, code `KP.LOAD.<zone>`,
@@ -164,6 +191,19 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     (no day-ahead) are excluded. Daily settlement, indexed by **trading date** → the single-vintage
     `covariate` table (midnight-UTC `ts`) via the `load` hook; first run backfills from 2020.
     Validated by `gas_spot_schema` (EUR/MWh band). (ADR 0008.)
+  - **ecb_fx** (ECB) — daily euro **FX reference rates** (units of foreign currency per 1 EUR),
+    a price/supply **covariate** (USD for LNG/oil, GBP for the UK NBP hub, NOK for Norwegian
+    pipeline supply), from the **public** file
+    `https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip` — **no auth**. One series per
+    currency, code `ECB.FX.<currency>` (`group` = `fx`, `sub_group` = `spot`, `unit` =
+    `<CCY>/EUR`); the kept currencies — USD, GBP, NOK — in `settings/ecb_fx.yaml`. Rates are
+    stored **as published** (foreign per EUR); inversion is a downstream `ml/` concern. The ZIP
+    holds one wide CSV (`Date` + a column per currency, history from 1999); `fetch()` is a
+    **single** GET (no async), `_parse` drops the trailing `Unnamed` column and `N/A`/blank cells
+    and melts to long. **Full refresh** every run — the file is the whole history and the upsert
+    is idempotent, so there is no incremental window. Daily rate, indexed by date → the
+    single-vintage `covariate` table (midnight-UTC `ts`) via the `load` hook. Validated by
+    `fx_schema` (a `(0, 1000]` gross-error band). (ADR 0008.)
   - **kpler_power_demand_forecast** (Kpler) — the **forecast** counterpart of
     `kpler_power_demand`, kept per vintage, from `…/power/loads/forecasts`. Hourly electricity
     demand (total load, MW) **forecasts** per power zone, the two 00z models of the other
