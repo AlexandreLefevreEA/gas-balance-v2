@@ -10,6 +10,13 @@ keeping the fixture-based connector tests DB-free (the same convention the conne
 from __future__ import annotations
 
 import datetime as dt
+import logging
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
+
+log = logging.getLogger(__name__)
 
 # Forecast-covariate retention policy, shared by every `*_forecast` connector: keep all daily
 # runs this many days back, plus every Monday run for a year (see the connector docstrings).
@@ -106,3 +113,37 @@ def vintages_to_delete(
         else:
             out.add(d)  # non-Monday outside the window: delete
     return out
+
+
+def prune_vintages(session: Session, source: str) -> int:
+    """Delete forecast vintages outside the retention window for `source`. Returns rows deleted.
+
+    Runs in the caller's transaction (the connector's `load` hook commits on success, so a failed
+    load rolls back the prune too). The `*_forecast` connectors expose this via their `prune` hook
+    (`etl prune <source>`). See ADR 0009.
+    """
+    from sqlalchemy import delete, select
+
+    from gasbalance_core.models import ForecastCovariate, Series
+
+    today = dt.datetime.now(dt.UTC).date()
+    sids = select(Series.id).where(Series.source == source)
+    made_ons = list(
+        session.execute(
+            select(ForecastCovariate.made_on)
+            .where(ForecastCovariate.series_id.in_(sids))
+            .distinct()
+        ).scalars()
+    )
+    to_delete = vintages_to_delete(made_ons, today)
+    if not to_delete:
+        return 0
+    result = session.execute(
+        delete(ForecastCovariate).where(
+            ForecastCovariate.series_id.in_(sids),
+            ForecastCovariate.made_on.in_(to_delete),
+        )
+    )
+    deleted = int(cast(Any, result).rowcount or 0)  # DML CursorResult.rowcount
+    log.info("%s: pruned %d rows across %d vintages", source, deleted, len(to_delete))
+    return deleted

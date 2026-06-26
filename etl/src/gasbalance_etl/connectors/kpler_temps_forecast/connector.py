@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import pandas as pd
@@ -41,6 +41,7 @@ import pandas as pd
 from gasbalance_etl.connectors._kpler_common import (
     desired_run_dates,
     loaded_run_dates,
+    prune_vintages,
     vintages_to_delete,
 )
 from gasbalance_etl.connectors._kpler_http import request
@@ -113,32 +114,8 @@ def load(session: Session, df: pd.DataFrame, run_id: int, code_to_id: dict[str, 
 
 
 def prune(session: Session) -> int:
-    """Delete forecast vintages outside the retention window. Returns rows deleted."""
-    from sqlalchemy import delete, select
-
-    from gasbalance_core.models import ForecastCovariate, Series
-
-    today = dt.datetime.now(dt.UTC).date()
-    sids = select(Series.id).where(Series.source == source)
-    made_ons = list(
-        session.execute(
-            select(ForecastCovariate.made_on)
-            .where(ForecastCovariate.series_id.in_(sids))
-            .distinct()
-        ).scalars()
-    )
-    to_delete = _vintages_to_delete(made_ons, today)
-    if not to_delete:
-        return 0
-    result = session.execute(
-        delete(ForecastCovariate).where(
-            ForecastCovariate.series_id.in_(sids),
-            ForecastCovariate.made_on.in_(to_delete),
-        )
-    )
-    deleted = int(cast(Any, result).rowcount or 0)  # DML CursorResult.rowcount
-    log.info("kpler-fc: pruned %d rows across %d vintages", deleted, len(to_delete))
-    return deleted
+    """Delete forecast vintages outside the retention window (shared rule). Returns rows deleted."""
+    return prune_vintages(session, source)
 
 
 def fetch(since: dt.date | None = None) -> pd.DataFrame:
