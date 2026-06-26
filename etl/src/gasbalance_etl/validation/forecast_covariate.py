@@ -9,6 +9,9 @@ non-forecast schema: `temperature_schema` ([-60, 60] °C) for temperature foreca
 for power price-forward-curve forecasts, and `availability_schema` ([0, 200_000] MW) for
 plant-availability vintages (`made_on` = the `asOf` snapshot date). Used by forecast connectors
 that load into the vintage-keyed `forecast_covariate` table. See ADR 0009.
+for power price-forward-curve forecasts, and `carbon_schema` ([0, 1000] EUR/tCO2) for the carbon
+(EUA) futures-settlement anchors and the spline forward curve. Used by forecast connectors that
+load into the vintage-keyed `forecast_covariate` table. See ADR 0009.
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ from __future__ import annotations
 import pandera.pandas as pa
 
 from gasbalance_etl.validation.availability import availability_schema
+from gasbalance_etl.validation.carbon import carbon_schema
 from gasbalance_etl.validation.demand import demand_schema
 from gasbalance_etl.validation.generation import generation_schema
 from gasbalance_etl.validation.price import price_schema
@@ -72,6 +76,17 @@ forecast_covariate_power_price_schema = pa.DataFrameSchema(
         "made_on": pa.Column("datetime64[ns]", nullable=False),  # the trading date (vintage)
     },
     unique=["made_on", "date", "series_id"],  # a vintage, a delivery day, a series
+    coerce=True,
+    strict=False,
+)
+
+forecast_covariate_carbon_schema = pa.DataFrameSchema(
+    name="forecast_covariate_carbon",
+    columns={
+        **carbon_schema.columns,
+        "made_on": pa.Column("datetime64[ns]", nullable=False),  # the trading date (vintage)
+    },
+    unique=["made_on", "date", "series_id"],  # a vintage, a maturity/delivery day, a series
     coerce=True,
     strict=False,
 )

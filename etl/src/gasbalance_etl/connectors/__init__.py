@@ -20,6 +20,7 @@ from gasbalance_etl.connectors.ecb_fx import connector as _ecb_fx
 from gasbalance_etl.connectors.kpler_actual_temps import connector as _kpler
 from gasbalance_etl.connectors.kpler_availability import connector as _kpler_avail
 from gasbalance_etl.connectors.kpler_availability_forecast import connector as _kpler_avail_fc
+from gasbalance_etl.connectors.kpler_carbon_settles import connector as _kpler_carbon_settles
 from gasbalance_etl.connectors.kpler_carbon_spot import connector as _kpler_carbon
 from gasbalance_etl.connectors.kpler_gas_spot import connector as _kpler_gas_spot
 from gasbalance_etl.connectors.kpler_generation_actual import connector as _kpler_gen
@@ -32,6 +33,7 @@ from gasbalance_etl.connectors.kpler_power_demand_long_term import connector as 
 from gasbalance_etl.connectors.kpler_power_forward_curve import connector as _kpler_pfc
 from gasbalance_etl.connectors.kpler_power_spot import connector as _kpler_spot
 from gasbalance_etl.connectors.kpler_temps_forecast import connector as _kpler_fc
+from gasbalance_etl.transforms import carbon_curve as _carbon_curve
 from gasbalance_etl.transforms import derived as _derived
 
 REGISTRY: dict[str, Any] = {
@@ -41,6 +43,7 @@ REGISTRY: dict[str, Any] = {
     _kpler_avail.source: _kpler_avail,
     _kpler_avail_fc.source: _kpler_avail_fc,
     _kpler_carbon.source: _kpler_carbon,
+    _kpler_carbon_settles.source: _kpler_carbon_settles,
     _kpler_gas_spot.source: _kpler_gas_spot,
     _kpler_gen.source: _kpler_gen,
     _kpler_gen_fc.source: _kpler_gen_fc,
@@ -52,5 +55,7 @@ REGISTRY: dict[str, Any] = {
     _kpler_demand_lt.source: _kpler_demand_lt,
     _kpler_pfc.source: _kpler_pfc,
     _kpler_spot.source: _kpler_spot,
-    _derived.source: _derived,  # keep last: reads what the raw sources loaded
+    # transforms read what the raw sources loaded -> registered after them (ADR 0007)
+    _carbon_curve.source: _carbon_curve,  # reads KP.CARBON.SPOT + KP.CARBON.SETTLES
+    _derived.source: _derived,  # keep last
 }
