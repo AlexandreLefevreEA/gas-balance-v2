@@ -68,6 +68,9 @@ Python is a **uv workspace** (`core`, `etl`, `ml`, `api`). Single test:
 - Each data source is a self-contained connector behind ONE interface — see
   `etl/src/gasbalance_etl/connectors/CLAUDE.md`. Sources are **not chosen yet**;
   the scaffold ships the contract + a template only.
+- **Speed is always preferred.** For connectors, if a source needs more than one request,
+  fan them out **async** (`httpx.AsyncClient` + `_kpler_http.arequest`, bounded by a
+  `_CONCURRENCY` semaphore over the shared 429/5xx retry) — don't loop requests serially.
 - Config & secrets come from env (`.env`, never committed); see `.env.example` for names.
 - Architectural decisions live in `docs/adr/`. Add one with `/new-adr`.
 - **Never touch `legacy/`** — frozen reference, excluded from VCS, reads blocked in

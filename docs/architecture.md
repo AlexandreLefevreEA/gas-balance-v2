@@ -101,6 +101,18 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     overwrite the **single-vintage `covariate`** in place — we do not vintage it (that's
     `kpler_generation_forecast`). Validated by the shared `generation_schema` (MW band). Zones in
     `settings/kpler_generation_long_term.yaml`. (ADR 0008.)
+  - **kpler_power_demand** (Kpler) — hourly actual electricity **demand** (total system load,
+    MW) per power zone, an exogenous **covariate** for gas-for-power demand (high load → more
+    gas plants run), from `…/power/loads/actual`. One series per area, code `KP.LOAD.<zone>`,
+    `sub_group` = the Kpler `loadType` (`demand`; `residual_demand` is a one-line add). HTTP
+    Basic Auth (shared Kpler key), JSON; **incremental** (self-managed from the last loaded
+    timestamp; first run backfills from 2015). The endpoint takes **one zone per request**
+    (`zone` is singular; plain country codes work — `DE`, not `DE-LU`) and caps a request at a
+    **12-year range**, so a run is `zones × ~10-year chunks` requests, **fanned out
+    concurrently** (bounded by `_CONCURRENCY`). Hourly → lands in the
+    `covariate` table via the `load` hook; raw hourly UTC stored, gas-day aggregation applied
+    downstream in `ml/`. Validated by `demand_schema` (MW band). Zones in
+    `settings/kpler_power_demand.yaml`. (ADR 0008.)
 - **ml/** — the data-science core. Reads clean series from Postgres, builds features
   (covariates), fits/backtests models from a registry, tracks experiments in MLflow,
   and writes forecasts back to Postgres. Models are config-selected, not hardcoded.
