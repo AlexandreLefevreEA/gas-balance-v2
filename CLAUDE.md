@@ -73,6 +73,13 @@ Python is a **uv workspace** (`core`, `etl`, `ml`, `api`). Single test:
   `_CONCURRENCY` semaphore over the shared 429/5xx retry) — don't loop requests serially.
 - Config & secrets come from env (`.env`, never committed); see `.env.example` for names.
 - Architectural decisions live in `docs/adr/`. Add one with `/new-adr`.
+- **One checkout = one agent.** A git *branch* isolates commits, not files — every branch
+  shares the single working tree/index/`HEAD`, so two agents in one checkout collide
+  (this is exactly how a parallel run once reverted edits and cross-staged files). Each
+  concurrent agent works in its **own git worktree** (`git worktree add
+  ../gas-balance-v2-<task> -b <branch>`); spawn subagents with `isolation: "worktree"`. A
+  `PreToolUse` guard (`.claude/hooks/worktree-guard.ps1`) blocks edits when a second live
+  session shares a checkout. How-to: `docs/runbook.md` → Parallel work.
 - **Never touch `legacy/`** — frozen reference, excluded from VCS, reads blocked in
   `.claude/settings.json`. Don't edit, import, run, or depend on it; port what you
   need into the v2 subsystems. (One-time config extraction is the only exception.)

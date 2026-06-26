@@ -19,5 +19,43 @@
       "Bash(git diff:*)",
       "Bash(git log:*)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -File \"${CLAUDE_PROJECT_DIR}/.claude/hooks/worktree-guard.ps1\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -File \"${CLAUDE_PROJECT_DIR}/.claude/hooks/worktree-register.ps1\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -File \"${CLAUDE_PROJECT_DIR}/.claude/hooks/worktree-release.ps1\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
   }
 }
