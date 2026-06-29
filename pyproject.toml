@@ -28,7 +28,10 @@ files = ["core/src", "etl/src", "ml/src", "api/src"]
 # pandas/yaml/scipy ship no usable stubs — treat as untyped instead of erroring on import.
 # (pandera is typed; we keep strict checking on it.)
 [[tool.mypy.overrides]]
-module = ["pandas", "pandas.*", "yaml", "scipy", "scipy.*"]
+module = [
+  "pandas", "pandas.*", "yaml", "scipy", "scipy.*",
+  "lightgbm", "lightgbm.*", "optuna", "optuna.*", "mlflow", "mlflow.*",
+]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

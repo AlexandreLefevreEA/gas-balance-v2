@@ -24,7 +24,7 @@
 - code: CE.78.04
   name: HR Demand
   group: demand
-  sub_group: null
+  sub_group: total
   area: HR
   unit: mcm
   positive:
@@ -96,7 +96,7 @@
 - code: CE.78.05
   name: HU Demand
   group: demand
-  sub_group: null
+  sub_group: total
   area: HU
   unit: mcm
   positive:
@@ -177,7 +177,7 @@
 - code: CE.80
   name: IT LDZ
   group: demand
-  sub_group: null
+  sub_group: LDZ
   area: IT
   unit: mcm
   positive:
@@ -186,7 +186,7 @@
 - code: CE.81
   name: IT IND
   group: demand
-  sub_group: null
+  sub_group: IND
   area: IT
   unit: mcm
   positive:
@@ -196,7 +196,7 @@
 - code: CE.82
   name: IT GTP
   group: demand
-  sub_group: null
+  sub_group: GTP
   area: IT
   unit: mcm
   positive:
@@ -327,7 +327,7 @@
 - code: CE.66
   name: NL LDZ
   group: demand
-  sub_group: null
+  sub_group: LDZ
   area: NL
   unit: mcm
   positive:
@@ -336,7 +336,7 @@
 - code: CE.67
   name: NL IND
   group: demand
-  sub_group: null
+  sub_group: IND
   area: NL
   unit: mcm
   positive:
@@ -347,7 +347,7 @@
 - code: CE.68
   name: NL GTP
   group: demand
-  sub_group: null
+  sub_group: GTP
   area: NL
   unit: mcm
   positive:
@@ -428,7 +428,7 @@
 - code: CE.78.06
   name: PL Demand
   group: demand
-  sub_group: null
+  sub_group: total
   area: PL
   unit: mcm
   positive:
@@ -500,7 +500,7 @@
 - code: CE.78.07
   name: RO Demand
   group: demand
-  sub_group: null
+  sub_group: total
   area: RO
   unit: mcm
   positive:
@@ -554,7 +554,7 @@
 - code: CE.78.08
   name: SI Demand
   group: demand
-  sub_group: null
+  sub_group: total
   area: SI
   unit: mcm
   positive:
@@ -572,7 +572,7 @@
 - code: CE.78.09
   name: SK Demand
   group: demand
-  sub_group: null
+  sub_group: total
   area: SK
   unit: mcm
   positive:
@@ -617,7 +617,7 @@
 - code: CE.74.1
   name: AT Lindau LDZ
   group: demand
-  sub_group: null
+  sub_group: LDZ
   area: AT
   unit: mcm
   positive:
@@ -627,7 +627,7 @@
 - code: CE.74.2
   name: AT East LDZ
   group: demand
-  sub_group: null
+  sub_group: LDZ
   area: AT
   unit: mcm
   positive:
@@ -637,7 +637,7 @@
 - code: CE.74.3
   name: AT T&V LDZ
   group: demand
-  sub_group: null
+  sub_group: LDZ
   area: AT
   unit: mcm
   positive:
@@ -647,7 +647,7 @@
 - code: CE.74.4
   name: AT Vorarlberg LDZ
   group: demand
-  sub_group: null
+  sub_group: LDZ
   area: AT
   unit: mcm
   positive:
@@ -657,7 +657,7 @@
 - code: CE.74
   name: AT LDZ
   group: demand
-  sub_group: null
+  sub_group: LDZ
   area: AT
   unit: mcm
   positive:
@@ -671,7 +671,7 @@
 - code: CE.74.5
   name: AT IND
   group: demand
-  sub_group: null
+  sub_group: IND
   area: AT
   unit: mcm
   positive:
@@ -682,7 +682,7 @@
 - code: CE.74.5.1
   name: AT East IND
   group: demand
-  sub_group: null
+  sub_group: IND
   area: AT
   unit: mcm
   positive:
@@ -692,7 +692,7 @@
 - code: CE.74.52
   name: AT T&V IND
   group: demand
-  sub_group: null
+  sub_group: IND
   area: AT
   unit: mcm
   positive:
@@ -702,7 +702,7 @@
 - code: CE.75
   name: AT GTP
   group: demand
-  sub_group: null
+  sub_group: GTP
   area: AT
   unit: mcm
   positive:
@@ -712,7 +712,7 @@
 - code: CE.75.1
   name: AT CE Demand
   group: demand
-  sub_group: null
+  sub_group: total
   area: AT
   unit: mcm
   positive:
@@ -785,7 +785,7 @@
 - code: CE.70
   name: BE LDZ
   group: demand
-  sub_group: null
+  sub_group: LDZ
   area: BE
   unit: mcm
   positive:
@@ -794,7 +794,7 @@
 - code: CE.71
   name: BE IND
   group: demand
-  sub_group: null
+  sub_group: IND
   area: BE
   unit: mcm
   positive:
@@ -803,7 +803,7 @@
 - code: CE.72
   name: BE GTP
   group: demand
-  sub_group: null
+  sub_group: GTP
   area: BE
   unit: mcm
   positive:
@@ -866,7 +866,7 @@
 - code: CE.78.02
   name: BG Demand
   group: demand
-  sub_group: null
+  sub_group: total
   area: BG
   unit: mcm
   positive:
@@ -929,7 +929,7 @@
 - code: CE.78.01
   name: CZ Demand
   group: demand
-  sub_group: null
+  sub_group: total
   area: CZ
   unit: mcm
   positive:
@@ -1010,7 +1010,7 @@
 - code: CE.54
   name: DE LDZ
   group: demand
-  sub_group: null
+  sub_group: LDZ
   area: DE
   unit: mcm
   positive:
@@ -1020,7 +1020,7 @@
 - code: CE.55
   name: DE IND
   group: demand
-  sub_group: null
+  sub_group: IND
   area: DE
   unit: mcm
   positive:
@@ -1031,7 +1031,7 @@
 - code: CE.56
   name: DE GTP
   group: demand
-  sub_group: null
+  sub_group: GTP
   area: DE
   unit: mcm
   positive:
@@ -1199,7 +1199,7 @@
 - code: CE.62
   name: FR LDZ
   group: demand
-  sub_group: null
+  sub_group: LDZ
   area: FR
   unit: mcm
   positive:
@@ -1208,7 +1208,7 @@
 - code: CE.63
   name: FR IND
   group: demand
-  sub_group: null
+  sub_group: IND
   area: FR
   unit: mcm
   positive:
@@ -1217,7 +1217,7 @@
 - code: CE.64
   name: FR GTP
   group: demand
-  sub_group: null
+  sub_group: GTP
   area: FR
   unit: mcm
   positive:
@@ -1318,7 +1318,7 @@
 - code: CE.58
   name: GB LDZ
   group: demand
-  sub_group: null
+  sub_group: LDZ
   area: GB
   unit: mcm
   positive:
@@ -1327,7 +1327,7 @@
 - code: CE.59
   name: GB IND
   group: demand
-  sub_group: null
+  sub_group: IND
   area: GB
   unit: mcm
   positive:
@@ -1336,7 +1336,7 @@
 - code: CE.60
   name: GB GTP
   group: demand
-  sub_group: null
+  sub_group: GTP
   area: GB
   unit: mcm
   positive:
@@ -1426,7 +1426,7 @@
 - code: CE.78.03
   name: GR Demand
   group: demand
-  sub_group: null
+  sub_group: total
   area: GR
   unit: mcm
   positive:

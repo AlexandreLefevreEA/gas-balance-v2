@@ -1,0 +1,14 @@
+CE.54:
+  area: DE
+  model: lightgbm
+  model_run_id: lightgbm-2026-06-29
+  n_origins: 8
+  params:
+    colsample_bytree: 0.7220736384279395
+    learning_rate: 0.024523053743815682
+    min_child_samples: 63
+    n_estimators: 206
+    num_leaves: 221
+    subsample: 0.6973853802258461
+  selected_on: '2026-06-29'
+  skill: 0.545156298879873

@@ -6,11 +6,16 @@ description = "Forecasting core: model registry, features, backtesting, tuning, 
 requires-python = ">=3.12"
 dependencies = [
   "gasbalance-core",
-  # e.g. darts, scikit-learn, optuna, mlflow, pandas — added when implemented
+  "pandas",
+  "numpy",
+  "pyyaml>=6",  # the series -> model registry (registry.py)
+  "lightgbm>=4",
+  "optuna>=3",
+  "mlflow>=2",
 ]
 
-# [project.scripts]
-# ml = "gasbalance_ml.cli:main"   # uncomment when cli.py exists
+[project.scripts]
+ml = "gasbalance_ml.cli:main"
 
 [build-system]
 requires = ["hatchling"]
