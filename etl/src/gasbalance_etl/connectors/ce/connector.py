@@ -1,7 +1,9 @@
 """Commodity Essentials connector.
 
-Auth: HTTP Basic Auth (CE_USERNAME / CE_PASSWORD). Format: CSV. Refresh: FULL — re-fetch
-full history since 2014 every run; `since` is ignored (idempotent upsert makes re-runs safe).
+Auth: HTTP Basic Auth (CE_USERNAME / CE_PASSWORD). Format: CSV. Refresh: **incremental** —
+`fetch` pulls from `max(one year ago, last loaded obs_date)` (the `since` arg is ignored; the
+window is self-determined from `observation`). A fresh/empty source backfills only the last year,
+not since 2014; idempotent upsert keeps any older history already loaded.
 
 Speed: `eugasseries` accepts comma-separated ids, so the ~258 raw series this connector
 needs are fetched in a few **batched** requests (not one-per-series), run **async**
@@ -24,6 +26,7 @@ from typing import Any
 import httpx
 import pandas as pd
 
+from gasbalance_etl.connectors._kpler_common import last_loaded_obs_date
 from gasbalance_etl.connectors.ce.config import CeSettings, get_ce_settings
 from gasbalance_etl.settings import load_series_dict
 from gasbalance_etl.transforms.compose import compose, referenced_ids
@@ -35,7 +38,11 @@ log = logging.getLogger(__name__)
 source = "ce"
 schema = canonical_schema
 
-_HISTORY_START = dt.date(2014, 1, 1)
+# Incremental window: backfill only the last year on an empty source, then pull from the last
+# loaded day (minus a refresh overlap for late CE revisions). Earlier history already loaded is
+# retained by the idempotent upsert.
+_BACKFILL_DAYS = 365
+_REFRESH_DAYS = 7
 # ponytail: ~60 ids/request keeps the URL well under limits; 6-way concurrency clears the
 # ~5 batches in one round. Raise both if CE tolerates it and fetching is the bottleneck.
 _BATCH_IDS = 60
@@ -97,17 +104,21 @@ async def _fetch_all(cfg: CeSettings, ids: list[str], start: str, end: str) -> p
 
 
 def fetch(since: dt.date | None = None) -> pd.DataFrame:
-    """Full refresh: fetch every raw CE series the dictionary needs, since 2014.
+    """Incremental: fetch the raw CE series from `max(one year ago, last loaded obs_date)`.
 
-    `since` is accepted (framework contract) but ignored — full refresh by design.
+    `since` (framework contract) is ignored — the window is self-determined from the `observation`
+    table, so a cron run pulls only recent days; an empty source backfills the last year.
     """
-    del since  # ponytail: full refresh; idempotent upsert makes re-runs safe
+    del since
     cfg = get_ce_settings()
     ids = referenced_ids(series_dict())
+    today = dt.date.today()
+    floor = today - dt.timedelta(days=_BACKFILL_DAYS)
+    last = last_loaded_obs_date(source)
+    start = max(floor, last - dt.timedelta(days=_REFRESH_DAYS)) if last else floor
     n_batches = -(-len(ids) // _BATCH_IDS)
-    log.info("ce: fetching %d raw series in %d batches", len(ids), n_batches)
-    start, end = _HISTORY_START.isoformat(), dt.date.today().isoformat()
-    return asyncio.run(_fetch_all(cfg, ids, start, end))
+    log.info("ce: fetching %d raw series in %d batches (%s..%s)", len(ids), n_batches, start, today)
+    return asyncio.run(_fetch_all(cfg, ids, start.isoformat(), today.isoformat()))
 
 
 def to_canonical(raw: pd.DataFrame) -> pd.DataFrame:

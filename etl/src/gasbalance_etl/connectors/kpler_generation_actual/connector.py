@@ -23,6 +23,7 @@ Auth: HTTP Basic with `KPLER_API_KEY_V2` (shared with the other Kpler connectors
 
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 import logging
 from typing import TYPE_CHECKING, Any
@@ -31,13 +32,15 @@ import httpx
 import pandas as pd
 
 from gasbalance_etl.connectors._kpler_common import date_chunks, last_loaded_ts
-from gasbalance_etl.connectors._kpler_http import request
+from gasbalance_etl.connectors._kpler_http import arequest
 from gasbalance_etl.connectors.kpler_actual_temps.config import get_kpler_settings
 from gasbalance_etl.settings import load_series_dict
 from gasbalance_etl.validation.generation import generation_schema
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
+
+    from gasbalance_etl.connectors.kpler_actual_temps.config import KplerSettings
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +67,8 @@ _REFRESH_DAYS = 5
 # One response covers a whole window for all zones (~90 d x 18 zones ~ 0.5 M rows, no cap
 # seen); chunk the date range so each response stays bounded.
 _CHUNK_DAYS = 90
+# Fan the date-chunks out concurrently; the global Kpler cap in _kpler_http is the real limiter.
+_CONCURRENCY = 8
 
 
 def _code(zone: str, fuel: str) -> str:
@@ -100,6 +105,37 @@ def load(session: Session, df: pd.DataFrame, run_id: int, code_to_id: dict[str, 
     return upsert_covariates(session, df, run_id, code_to_id)
 
 
+async def _fetch_rows(
+    cfg: KplerSettings, zones: list[str], chunks: list[tuple[dt.date, dt.date]]
+) -> list[dict[str, Any]]:
+    """Fetch the date-chunks concurrently (bounded) -> flat list of raw Kpler data dicts."""
+    sem = asyncio.Semaphore(_CONCURRENCY)
+    async with httpx.AsyncClient(
+        base_url=cfg.base_url,
+        headers={"Authorization": f"Basic {cfg.api_key_v2}", "Accept": "application/json"},
+        timeout=180.0,
+    ) as client:
+
+        async def _one(lo: dt.date, hi: dt.date) -> list[dict[str, Any]]:
+            async with sem:
+                resp = await arequest(
+                    client,
+                    _ENDPOINT,
+                    {
+                        "zones": zones,
+                        "granularity": "hourly",
+                        "timezone": "UTC",
+                        "startDate": lo.isoformat(),
+                        "endDate": hi.isoformat(),
+                    },
+                    label="kpler_generation_actual",
+                )
+            return list(resp.json().get("data", []))
+
+        results = await asyncio.gather(*[_one(lo, hi) for lo, hi in chunks])
+    return [row for chunk in results for row in chunk]
+
+
 def fetch(since: dt.date | None = None) -> pd.DataFrame:
     """Incremental: pull hourly generation for every hour not yet loaded.
 
@@ -121,27 +157,7 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
         return pd.DataFrame(columns=cols)
     log.info("kpler_generation_actual: %d zones, %s..%s", len(zones), start, end)
 
-    rows: list[dict[str, Any]] = []
-    with httpx.Client(
-        base_url=cfg.base_url,
-        headers={"Authorization": f"Basic {cfg.api_key_v2}", "Accept": "application/json"},
-        timeout=180.0,
-    ) as client:
-        for lo, hi in date_chunks(start, end, _CHUNK_DAYS):
-            resp = request(
-                client,
-                _ENDPOINT,
-                {
-                    "zones": zones,
-                    "granularity": "hourly",
-                    "timezone": "UTC",
-                    "startDate": lo.isoformat(),
-                    "endDate": hi.isoformat(),
-                },
-                label="kpler_generation_actual",
-            )
-            rows.extend(resp.json().get("data", []))
-
+    rows = asyncio.run(_fetch_rows(cfg, zones, date_chunks(start, end, _CHUNK_DAYS)))
     df = pd.DataFrame(rows, columns=["zone", "fuelType", "startDate", "value"]).rename(
         columns={"startDate": "date"}
     )

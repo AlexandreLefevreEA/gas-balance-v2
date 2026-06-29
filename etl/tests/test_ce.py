@@ -29,6 +29,37 @@ def test_parse_multi_csv() -> None:
     assert dt.date(2014, 1, 2) not in out["55259"].index
 
 
+def test_fetch_window_incremental(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Window = max(one year ago, last loaded - refresh); an empty source backfills one year."""
+    captured: dict[str, str] = {}
+
+    async def _fake_fetch_all(cfg: object, ids: list[str], start: str, end: str) -> pd.DataFrame:
+        captured["start"], captured["end"] = start, end
+        return pd.DataFrame()
+
+    monkeypatch.setattr(ce, "get_ce_settings", lambda: None)
+    monkeypatch.setattr(ce, "_fetch_all", _fake_fetch_all)
+    today = dt.date.today()
+    floor = (today - dt.timedelta(days=ce._BACKFILL_DAYS)).isoformat()
+
+    # recent last load -> pull from last - refresh overlap (incremental), end = today
+    last = today - dt.timedelta(days=3)
+    monkeypatch.setattr(ce, "last_loaded_obs_date", lambda source: last)
+    ce.fetch()
+    assert captured["start"] == (last - dt.timedelta(days=ce._REFRESH_DAYS)).isoformat()
+    assert captured["end"] == today.isoformat()
+
+    # empty source -> backfill exactly one year (not since 2014)
+    monkeypatch.setattr(ce, "last_loaded_obs_date", lambda source: None)
+    ce.fetch()
+    assert captured["start"] == floor
+
+    # ancient last load -> floored at one year back
+    monkeypatch.setattr(ce, "last_loaded_obs_date", lambda source: today - dt.timedelta(days=1000))
+    ce.fetch()
+    assert captured["start"] == floor
+
+
 def test_nonfinite_value_is_blocked() -> None:
     df = pd.DataFrame(
         {

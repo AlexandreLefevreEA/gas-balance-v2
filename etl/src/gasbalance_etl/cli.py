@@ -12,8 +12,10 @@ Connectors are isolated: one failing source never blocks the others.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import datetime as dt
 import logging
+import os
 from typing import Any
 
 import pandera.errors as pa_errors
@@ -64,6 +66,26 @@ def _run_one(name: str, conn: Any) -> int:
         session.close()
 
 
+def _run_phase(names: list[str], jobs: int) -> int:
+    """Run the given connectors concurrently (own session + asyncio loop each); return # failed.
+
+    Connectors share no mutable state, so threading is safe; each failure is isolated (logged and
+    recorded in `etl_run`) and never blocks the others. The pool join (context exit) is the barrier
+    the transform phase relies on — every raw connector has committed before transforms read.
+    """
+    if not names:
+        return 0
+    failed = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+        futures = {pool.submit(_run_one, name, REGISTRY[name]): name for name in names}
+        for fut in concurrent.futures.as_completed(futures):
+            try:
+                fut.result()
+            except Exception:  # already logged + recorded in etl_run; isolate the others
+                failed += 1
+    return failed
+
+
 def _prune_one(name: str) -> int:
     """Apply a connector's retention policy, if it declares one (`prune` hook)."""
     conn = REGISTRY[name]
@@ -100,13 +122,27 @@ def main(argv: list[str] | None = None) -> int:
         known = ", ".join(REGISTRY) or "(none)"
         parser.error(f"unknown source '{args.source}'. Known: {known}")
 
-    names = list(REGISTRY) if args.source == "all" else [args.source]
-    failed = 0
-    for name in names:
+    if args.source != "all":
         try:
-            _run_one(name, REGISTRY[name])
-        except Exception:  # already logged + recorded in etl_run; isolate the others
-            failed += 1
+            _run_one(args.source, REGISTRY[args.source])
+        except Exception:  # already logged + recorded in etl_run
+            return 1
+        return 0
+
+    # `run all`: raw connectors concurrently, then the transforms (they read what raw loaded — the
+    # only dependency, ADR 0007). raw connectors are mutually independent (verified: none reads
+    # another's data), so order within a phase is free.
+    jobs = int(os.environ.get("ETL_JOBS", "6"))
+    raw = [n for n in REGISTRY if not getattr(REGISTRY[n], "is_transform", False)]
+    transforms = [n for n in REGISTRY if getattr(REGISTRY[n], "is_transform", False)]
+    log.info(
+        "etl run all: %d raw connectors (<=%d concurrent), then %d transform(s)",
+        len(raw),
+        jobs,
+        len(transforms),
+    )
+    failed = _run_phase(raw, jobs)
+    failed += _run_phase(transforms, jobs)
     return 1 if failed else 0
 
 

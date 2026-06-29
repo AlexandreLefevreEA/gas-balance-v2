@@ -25,6 +25,7 @@ are hourly, so they land in `covariate` (not the daily `observation`) via the `l
 
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 import logging
 from typing import TYPE_CHECKING, Any
@@ -33,13 +34,15 @@ import httpx
 import pandas as pd
 
 from gasbalance_etl.connectors._kpler_common import last_loaded_at
-from gasbalance_etl.connectors._kpler_http import request
+from gasbalance_etl.connectors._kpler_http import arequest
 from gasbalance_etl.connectors.kpler_actual_temps.config import get_kpler_settings
 from gasbalance_etl.settings import load_series_dict
 from gasbalance_etl.validation.temperature import temperature_schema
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
+
+    from gasbalance_etl.connectors.kpler_actual_temps.config import KplerSettings
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +55,8 @@ _HORIZON_MONTHS = 24  # forward window pulled each run (user-chosen)
 _N_REF_YEARS = 10  # number of trailing weather years (REF_YYYY) to pull
 _MIN_REFRESH_DAYS = 7  # full refresh is weekly; skip when covariate was loaded more recently.
 # ponytail: lower this, or delete the source's covariate rows, to force a refresh sooner.
+# Fan the models out concurrently; the global Kpler cap in _kpler_http is the real limiter.
+_CONCURRENCY = 8
 
 
 def _models() -> list[str]:
@@ -98,6 +103,43 @@ def load(session: Session, df: pd.DataFrame, run_id: int, code_to_id: dict[str, 
     return upsert_covariates(session, df, run_id, code_to_id)
 
 
+async def _fetch_rows(
+    cfg: KplerSettings, zones: list[str], models: list[str], start: dt.date, end: dt.date
+) -> list[tuple[str, str, str, float]]:
+    """Fetch each model's profile concurrently (bounded) -> (zone, model, date, value) rows."""
+    sem = asyncio.Semaphore(_CONCURRENCY)
+    async with httpx.AsyncClient(
+        base_url=cfg.base_url,
+        headers={"Authorization": f"Basic {cfg.api_key_v2}", "Accept": "application/json"},
+        timeout=180.0,
+    ) as client:
+
+        async def _one(m: str) -> list[tuple[str, str, str, float]]:
+            async with sem:
+                resp = await arequest(
+                    client,
+                    _ENDPOINT,
+                    {
+                        "zones": zones,
+                        "baseWeatherModel": m,  # MEAN / REF_YYYY — not echoed in the response
+                        "granularity": "hourly",
+                        "timezone": "UTC",
+                        "startDate": start.isoformat(),
+                        "endDate": end.isoformat(),
+                        # runDate omitted -> latest run (profiles are run-date-independent)
+                    },
+                    label="kpler-lt",
+                )
+            return [
+                (d["zone"], m, d["startDate"], d["value"])
+                for d in resp.json().get("data", [])
+                if d.get("value") is not None
+            ]
+
+        results = await asyncio.gather(*[_one(m) for m in models])
+    return [row for chunk in results for row in chunk]
+
+
 def fetch(since: dt.date | None = None) -> pd.DataFrame:
     """Full refresh: pull the forward [today, today+24mo] hourly profile for every model.
 
@@ -118,33 +160,7 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
     end = (pd.Timestamp(today) + pd.DateOffset(months=_HORIZON_MONTHS)).date()
     log.info("kpler-lt: %d models x %d zones (%s..%s)", len(models), len(zones), start, end)
 
-    rows: list[tuple[str, str, str, float]] = []
-    with httpx.Client(
-        base_url=cfg.base_url,
-        headers={"Authorization": f"Basic {cfg.api_key_v2}", "Accept": "application/json"},
-        timeout=180.0,
-    ) as client:
-        for m in models:
-            resp = request(
-                client,
-                _ENDPOINT,
-                {
-                    "zones": zones,
-                    "baseWeatherModel": m,  # MEAN / REF_YYYY — not echoed in the response
-                    "granularity": "hourly",
-                    "timezone": "UTC",
-                    "startDate": start.isoformat(),
-                    "endDate": end.isoformat(),
-                    # runDate omitted -> latest run (profiles are run-date-independent)
-                },
-                label="kpler-lt",
-            )
-            rows.extend(
-                (d["zone"], m, d["startDate"], d["value"])
-                for d in resp.json().get("data", [])
-                if d.get("value") is not None
-            )
-
+    rows = asyncio.run(_fetch_rows(cfg, zones, models, start, end))
     # ponytail: holds the full ~3.5M-row frame in memory; per-model load if it ever bites.
     df = pd.DataFrame(rows, columns=["zone", "model", "date", "value"])
     if not df.empty:

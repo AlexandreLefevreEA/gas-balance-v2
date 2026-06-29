@@ -61,6 +61,26 @@ def last_loaded_at(source: str) -> dt.datetime | None:
         return session.execute(stmt).scalar_one_or_none()
 
 
+def last_loaded_obs_date(source: str) -> dt.date | None:
+    """Latest `observation.obs_date` already stored for `source` (or None) — incremental floor.
+
+    The `observation`-table analogue of `last_loaded_ts` (which reads `covariate`); used by the
+    daily-observation connectors (e.g. `ce`) to fetch only from the last loaded day forward.
+    """
+    from sqlalchemy import func, select
+
+    from gasbalance_core.db import SessionLocal
+    from gasbalance_core.models import Observation, Series
+
+    stmt = (
+        select(func.max(Observation.obs_date))
+        .join(Series, Observation.series_id == Series.id)
+        .where(Series.source == source)
+    )
+    with SessionLocal() as session:
+        return session.execute(stmt).scalar_one_or_none()
+
+
 def loaded_run_dates(source: str) -> set[dt.date]:
     """Distinct `forecast_covariate.made_on` already stored for `source` (drives gap backfill)."""
     from sqlalchemy import select

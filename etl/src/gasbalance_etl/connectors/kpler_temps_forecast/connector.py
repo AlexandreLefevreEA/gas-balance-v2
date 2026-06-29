@@ -31,6 +31,7 @@ One request per run date returns both models for all zones. Auth: HTTP Basic wit
 
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 import logging
 from typing import TYPE_CHECKING, Any
@@ -44,13 +45,15 @@ from gasbalance_etl.connectors._kpler_common import (
     prune_vintages,
     vintages_to_delete,
 )
-from gasbalance_etl.connectors._kpler_http import request
+from gasbalance_etl.connectors._kpler_http import arequest
 from gasbalance_etl.connectors.kpler_actual_temps.config import get_kpler_settings
 from gasbalance_etl.settings import load_series_dict
 from gasbalance_etl.validation.forecast_covariate import forecast_covariate_temperature_schema
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
+
+    from gasbalance_etl.connectors.kpler_actual_temps.config import KplerSettings
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +67,8 @@ _ENDPOINT = "power/loads/forecasts/temperature"
 _MODELS = ["EC_AIFS_ENS", "EC_46"]
 # Re-pull the most recent few run dates each run, to catch revised (updatedAt) runs.
 _REFRESH_DAYS = 3
+# Fan the run-dates out concurrently; the global Kpler cap in _kpler_http is the real limiter.
+_CONCURRENCY = 8
 
 
 def _code(zone: str, model: str) -> str:
@@ -118,6 +123,42 @@ def prune(session: Session) -> int:
     return prune_vintages(session, source)
 
 
+async def _fetch_rows(
+    cfg: KplerSettings, zones: list[str], run_dates: list[dt.date]
+) -> list[tuple[str, str, str, float, str]]:
+    """Fetch each run-date concurrently (bounded) -> (zone, model, date, value, runDate) rows."""
+    sem = asyncio.Semaphore(_CONCURRENCY)
+    async with httpx.AsyncClient(
+        base_url=cfg.base_url,
+        headers={"Authorization": f"Basic {cfg.api_key_v2}", "Accept": "application/json"},
+        timeout=180.0,
+    ) as client:
+
+        async def _one(rd: dt.date) -> list[tuple[str, str, str, float, str]]:
+            async with sem:
+                resp = await arequest(
+                    client,
+                    _ENDPOINT,
+                    {
+                        "runDate": rd.isoformat(),
+                        "run": "00z",
+                        "zones": zones,
+                        "models": _MODELS,
+                        "granularity": "hourly",
+                        "timezone": "UTC",
+                    },
+                    label="kpler-fc",
+                )
+            return [
+                (d["zone"], d["model"], d["startDate"], d["value"], d["runDate"])
+                for d in resp.json().get("data", [])
+                if d.get("value") is not None
+            ]
+
+        results = await asyncio.gather(*[_one(rd) for rd in run_dates])
+    return [row for chunk in results for row in chunk]
+
+
 def fetch(since: dt.date | None = None) -> pd.DataFrame:
     """Fetch every desired forecast vintage not already stored (+ a recent refresh overlap).
 
@@ -148,32 +189,7 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
         today,
     )
 
-    rows: list[tuple[str, str, str, float, str]] = []
-    with httpx.Client(
-        base_url=cfg.base_url,
-        headers={"Authorization": f"Basic {cfg.api_key_v2}", "Accept": "application/json"},
-        timeout=180.0,
-    ) as client:
-        for rd in run_dates:
-            resp = request(
-                client,
-                _ENDPOINT,
-                {
-                    "runDate": rd.isoformat(),
-                    "run": "00z",
-                    "zones": zones,
-                    "models": _MODELS,
-                    "granularity": "hourly",
-                    "timezone": "UTC",
-                },
-                label="kpler-fc",
-            )
-            rows.extend(
-                (d["zone"], d["model"], d["startDate"], d["value"], d["runDate"])
-                for d in resp.json().get("data", [])
-                if d.get("value") is not None
-            )
-
+    rows = asyncio.run(_fetch_rows(cfg, zones, run_dates))
     df = pd.DataFrame(rows, columns=cols)
     if not df.empty:
         # Kpler returns tz-aware UTC ISO timestamps; canonical `date` is naive UTC.

@@ -35,6 +35,7 @@ log = logging.getLogger(__name__)
 # --- connector interface (read by the CLI registry) -------------------------
 source = "derived"
 schema = canonical_schema
+is_transform = True  # reads raw outputs from Postgres -> the CLI runs it after the raw phase
 
 
 def series_dict() -> list[dict[str, Any]]:
