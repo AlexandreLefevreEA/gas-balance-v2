@@ -191,6 +191,20 @@ make those numbers **queryable, trustworthy, and cheap to re-experiment on**.
     (no day-ahead) are excluded. Daily settlement, indexed by **trading date** → the single-vintage
     `covariate` table (midnight-UTC `ts`) via the `load` hook; first run backfills from 2020.
     Validated by `gas_spot_schema` (EUR/MWh band). (ADR 0008.)
+  - **eq_coal_spot** (Energy Quantified / Montel EQ) — daily rolling **front-month** ICE **API-2**
+    coal spot price (USD/t), the European **CIF-ARA** coal benchmark, an exogenous **covariate**
+    for gas-for-power demand (the coal price sets gas-vs-coal switching economics), from
+    `…/ohlc/{curve}/latest/?date=<D>` (curve `Futures Coal API-2 USD/t ICE OHLC`). A **single**
+    global series, code `EQ.COAL.API2` (`group` = `price`, `sub_group` = `coal`), hardcoded in
+    `series_dict()`. Header auth (**`X-API-Key`** = `EQ_API_KEY`, not Basic), JSON; **incremental**
+    (self-managed from the last loaded timestamp; first run backfills from 2015). `/latest/?date=X`
+    returns the full contract list for the latest trading day **≤ X**, so a run is **one request
+    per weekday**, **fanned out concurrently** (bounded by `_CONCURRENCY`); we keep the front month
+    (`period == MONTH`, `front == 1`) and take its `settlement` (falling back to `close` when
+    unsettled), key the canonical `date` on the response's own `traded` date, and dedupe the
+    prior-trading-day repeats holidays produce. Daily settlement → the single-vintage `covariate`
+    table (midnight-UTC `ts`) via the `load` hook. Validated by `coal_spot_schema` (USD/t band).
+    Source API reference: `docs/sources/energy-quantified-api.md`. (ADR 0008.)
   - **ecb_fx** (ECB) — daily euro **FX reference rates** (units of foreign currency per 1 EUR),
     a price/supply **covariate** (USD for LNG/oil, GBP for the UK NBP hub, NOK for Norwegian
     pipeline supply), from the **public** file
