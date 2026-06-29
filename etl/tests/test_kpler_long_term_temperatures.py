@@ -65,3 +65,12 @@ def test_absurd_temperature_is_blocked() -> None:
     df = kp.to_canonical(_raw("FR", "MEAN", 999.0))  # e.g. a Kelvin mistake
     with pytest.raises(pa_errors.SchemaErrors):
         schema.validate(df, lazy=True)
+
+
+def test_fetch_skips_when_recently_loaded(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Full refresh is weekly: a recent covariate load -> fetch returns empty without any network.
+    recent = dt.datetime.now(dt.UTC) - dt.timedelta(days=1)
+    monkeypatch.setattr(kp, "last_loaded_at", lambda source: recent)
+    df = kp.fetch(None)
+    assert df.empty
+    assert list(df.columns) == ["zone", "model", "date", "value"]

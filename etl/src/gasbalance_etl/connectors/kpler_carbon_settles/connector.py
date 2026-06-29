@@ -239,4 +239,8 @@ def to_canonical(raw: pd.DataFrame) -> pd.DataFrame:
     df["area"] = meta["area"]
     df["value"] = df["value"].astype(float)
     df["source"] = source
-    return df[out_cols]
+    # The strip can list two EUA Future month rows for one (made_on, maturity), differing ~0.05
+    # EUR; the curve needs one anchor each. Keep the higher, deterministically.
+    return df.sort_values(["made_on", "date", "value"]).drop_duplicates(
+        subset=["made_on", "date", "series_id"], keep="last"
+    )[out_cols]

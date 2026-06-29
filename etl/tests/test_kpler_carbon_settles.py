@@ -136,3 +136,13 @@ def test_desired_run_dates_is_last_15_days_plus_mondays_of_the_year() -> None:
 
     assert min(desired) >= today - dt.timedelta(days=365)  # nothing older than a year
     assert max(desired) <= today  # nothing in the future
+
+
+def test_duplicate_maturity_in_one_vintage_deduped() -> None:
+    # The strip can list two EUA Future month rows for one (made_on, maturity); keep one (the
+    # higher) so the forecast unique(made_on, date, series_id) holds.
+    df = settles.to_canonical(
+        _raw([("2026-07-01", _EUA, "month", 69.97), ("2026-07-01", _EUA, "month", 70.02)])
+    )
+    assert list(df["value"]) == [70.02]
+    schema.validate(df, lazy=True)

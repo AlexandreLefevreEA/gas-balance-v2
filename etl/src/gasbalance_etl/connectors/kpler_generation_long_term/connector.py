@@ -40,6 +40,7 @@ from typing import TYPE_CHECKING, Any
 import httpx
 import pandas as pd
 
+from gasbalance_etl.connectors._kpler_common import last_loaded_at
 from gasbalance_etl.connectors._kpler_http import arequest
 from gasbalance_etl.connectors.kpler_actual_temps.config import get_kpler_settings
 from gasbalance_etl.settings import load_series_dict
@@ -59,6 +60,8 @@ schema = generation_schema
 _ENDPOINT = "power/generations/forecasts/long-term"
 _HORIZON_MONTHS = 24  # forward window pulled each run (matches kpler_long_term_temperatures)
 _N_REF_YEARS = 10  # number of trailing weather years (REF_YYYY) to pull
+_MIN_REFRESH_DAYS = 7  # full refresh is weekly; skip when covariate was loaded more recently.
+# ponytail: lower this, or delete the source's covariate rows, to force a refresh sooner.
 # Our three renewable fuel series: code -> display name (sub_group = code.lower()). Same codes as
 # kpler_generation_actual (minus GAS, which the long-term endpoint's fuelType enum doesn't offer).
 _FUELS = {"SOLAR": "Solar", "WIND": "Wind", "ROR": "Run-of-river"}
@@ -135,6 +138,10 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
     `_CONCURRENCY`) over the shared 429/5xx retry/backoff.
     """
     del since
+    last = last_loaded_at(source)
+    if last is not None and dt.datetime.now(dt.UTC) - last < dt.timedelta(days=_MIN_REFRESH_DAYS):
+        log.info("%s: covariate loaded <%dd ago; skipping full refresh", source, _MIN_REFRESH_DAYS)
+        return pd.DataFrame(columns=["zone", "fuel", "model", "date", "value"])
     cfg = get_kpler_settings()
     entries = series_dict()
     zones = sorted({e["zone"] for e in entries})

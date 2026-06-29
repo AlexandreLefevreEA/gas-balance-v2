@@ -41,6 +41,7 @@ from typing import TYPE_CHECKING, Any
 import httpx
 import pandas as pd
 
+from gasbalance_etl.connectors._kpler_common import last_loaded_at
 from gasbalance_etl.connectors._kpler_http import arequest
 from gasbalance_etl.connectors.kpler_actual_temps.config import get_kpler_settings
 from gasbalance_etl.settings import load_series_dict
@@ -60,6 +61,8 @@ schema = demand_schema
 _ENDPOINT = "power/loads/forecasts/long-term"
 _HORIZON_MONTHS = 24  # forward window pulled each run (matches the other long-term connectors)
 _N_REF_YEARS = 10  # number of trailing weather years (REF_YYYY) to pull
+_MIN_REFRESH_DAYS = 7  # full refresh is weekly; skip when covariate was loaded more recently.
+# ponytail: lower this, or delete the source's covariate rows, to force a refresh sooner.
 # sub_group tag only — this endpoint has no demand/residual split (no `loadType` param), so there
 # is nothing to send; the tag keeps the long-term series lined up with the actual/forecast demand.
 _LOAD_TYPE = "demand"
@@ -126,6 +129,10 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
     requests, fanned out concurrently (bounded by `_CONCURRENCY`) over the shared 429/5xx retry.
     """
     del since
+    last = last_loaded_at(source)
+    if last is not None and dt.datetime.now(dt.UTC) - last < dt.timedelta(days=_MIN_REFRESH_DAYS):
+        log.info("%s: covariate loaded <%dd ago; skipping full refresh", source, _MIN_REFRESH_DAYS)
+        return pd.DataFrame(columns=["zone", "model", "date", "value"])
     cfg = get_kpler_settings()
     entries = series_dict()
     zones = sorted({e["zone"] for e in entries})

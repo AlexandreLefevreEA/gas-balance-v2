@@ -170,8 +170,6 @@ def to_canonical(raw: pd.DataFrame) -> pd.DataFrame:
     df = df[df["value"].notna()].copy()
     if df.empty:
         return pd.DataFrame(columns=out_cols)
-    # ponytail: one SEME row per trading day observed 2015-2026, so no per-day dedup; the canonical
-    # schema's unique=[date, series_id] is the tripwire if the source ever returns two.
     df["series_id"] = meta["code"]
     df["name"] = meta["name"]
     df["group"] = meta["group"]
@@ -179,4 +177,6 @@ def to_canonical(raw: pd.DataFrame) -> pd.DataFrame:
     df["area"] = meta["area"]
     df["value"] = df["value"].astype(float)
     df["source"] = source
-    return df[out_cols]
+    # Older history repeats a trading day's SEME row (a holiday echoes the prior day), so dedupe
+    # (date, series_id) — same guard as eq_coal_spot; the schema's unique key is otherwise tripped.
+    return df.drop_duplicates(subset=["date", "series_id"])[out_cols]
