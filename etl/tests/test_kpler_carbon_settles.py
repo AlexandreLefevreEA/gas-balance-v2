@@ -25,9 +25,15 @@ _UKA = "EEX UKA Futures"
 
 
 def _raw(
-    rows: list[tuple[str, str, str, float | None]], made_on: str = "2026-06-25"
+    rows: list[tuple[str, str, str, float | None]],
+    made_on: str = "2026-06-25",
+    ois: list[float] | None = None,
 ) -> pd.DataFrame:
-    """Build a raw [date, long_name, maturity_type, value, made_on] frame like fetch() returns."""
+    """Build a raw [date, long_name, maturity_type, value, open_interest, made_on] frame.
+
+    `ois` sets per-row open interest (defaults to 100 each); only the collision test varies it.
+    """
+    ois = ois if ois is not None else [100.0] * len(rows)
     return pd.DataFrame(
         [
             {
@@ -35,11 +41,12 @@ def _raw(
                 "long_name": long_name,
                 "maturity_type": maturity_type,
                 "value": value,
+                "open_interest": oi,
                 "made_on": pd.to_datetime(made_on),
             }
-            for maturity, long_name, maturity_type, value in rows
+            for (maturity, long_name, maturity_type, value), oi in zip(rows, ois, strict=True)
         ],
-        columns=["date", "long_name", "maturity_type", "value", "made_on"],
+        columns=["date", "long_name", "maturity_type", "value", "open_interest", "made_on"],
     )
 
 
@@ -92,7 +99,9 @@ def test_made_on_carried_and_multiple_vintages_coexist() -> None:
 
 
 def test_empty_in_empty_out() -> None:
-    empty = pd.DataFrame(columns=["date", "long_name", "maturity_type", "value", "made_on"])
+    empty = pd.DataFrame(
+        columns=["date", "long_name", "maturity_type", "value", "open_interest", "made_on"]
+    )
     assert settles.to_canonical(empty).empty
 
 
@@ -138,11 +147,15 @@ def test_desired_run_dates_is_last_15_days_plus_mondays_of_the_year() -> None:
     assert max(desired) <= today  # nothing in the future
 
 
-def test_duplicate_maturity_in_one_vintage_deduped() -> None:
-    # The strip can list two EUA Future month rows for one (made_on, maturity); keep one (the
-    # higher) so the forecast unique(made_on, date, series_id) holds.
+def test_overlapping_contracts_keep_most_liquid() -> None:
+    # Kpler lists two distinct EEX contracts under one (made_on, maturity) — its maturityDate is
+    # occasionally misassigned. Keep the liquid one (max open interest), the market reference,
+    # NOT the higher price; the forecast unique(made_on, date, series_id) then holds.
     df = settles.to_canonical(
-        _raw([("2026-07-01", _EUA, "month", 69.97), ("2026-07-01", _EUA, "month", 70.02)])
+        _raw(
+            [("2026-07-01", _EUA, "month", 70.02), ("2026-07-01", _EUA, "month", 68.19)],
+            ois=[0.0, 209.0],
+        )
     )
-    assert list(df["value"]) == [70.02]
+    assert list(df["value"]) == [68.19]  # the OI=209 contract, despite its lower price
     schema.validate(df, lazy=True)

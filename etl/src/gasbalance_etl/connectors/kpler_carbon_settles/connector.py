@@ -147,7 +147,7 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
     refresh = {today - dt.timedelta(days=i) for i in range(_REFRESH_DAYS)}
     trading_dates = sorted((desired - have) | (desired & refresh))
 
-    cols = ["date", "long_name", "maturity_type", "value", "made_on"]
+    cols = ["date", "long_name", "maturity_type", "value", "open_interest", "made_on"]
     if not trading_dates:
         return pd.DataFrame(columns=cols)
     log.info(
@@ -169,12 +169,14 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
 
 async def _fetch_rows(
     cfg: KplerSettings, trading_dates: list[dt.date]
-) -> list[tuple[Any, Any, Any, Any, str]]:
+) -> list[tuple[Any, Any, Any, Any, Any, str]]:
     """Fan out one request per trading date concurrently (bounded), collect raw settlement rows.
 
     Every emissions product (EUA / ETS2 / UKA) is returned as-is and discriminated in
-    `to_canonical` (so the EUA filter is unit-testable). A `_CONCURRENCY` semaphore caps in-flight
-    requests; `arequest` handles 429/5xx retries underneath. Non-trading days return an empty list.
+    `to_canonical` (so the EUA filter is unit-testable). `openInterestLots` is carried so
+    `to_canonical` can pick the liquid contract when Kpler lists two under one maturityDate. A
+    `_CONCURRENCY` semaphore caps in-flight requests; `arequest` handles 429/5xx retries
+    underneath. Non-trading days return an empty list.
     """
     sem = asyncio.Semaphore(_CONCURRENCY)
 
@@ -184,7 +186,7 @@ async def _fetch_rows(
         timeout=180.0,
     ) as client:
 
-        async def one(td: dt.date) -> list[tuple[Any, Any, Any, Any, str]]:
+        async def one(td: dt.date) -> list[tuple[Any, Any, Any, Any, Any, str]]:
             async with sem:
                 resp = await arequest(
                     client,
@@ -198,6 +200,7 @@ async def _fetch_rows(
                     d.get("longName"),
                     d.get("maturityType"),
                     d.get("settlementPrice"),
+                    d.get("openInterestLots"),
                     td.isoformat(),
                 )
                 for d in resp.json().get("data", [])
@@ -213,6 +216,13 @@ def to_canonical(raw: pd.DataFrame) -> pd.DataFrame:
     Drops the other emissions products (`EEX EU ETS2 Future`, `EEX UKA Futures`), non-monthly
     contracts, and null settlements. No interpolation — anchors are stored raw (the `carbon_curve`
     transform splines them).
+
+    Kpler lists overlapping EEX contracts (distinct `product`s like /E.FEUAM25 and /E.FEUAN25)
+    and its `maturityDate` is occasionally misassigned, so two different contracts can land on one
+    `(made_on, maturityDate)` — the curve's anchor key. We keep the **most-liquid** one (max open
+    interest), the market's reference settlement for that delivery slot; the only collisions where
+    OI can't decide are deep/illiquid far years (all OI 0), and there the settlements sit ≤0.4 EUR
+    apart so the spline is insensitive to the deterministic tie-break.
     """
     out_cols = [
         "date",
@@ -239,8 +249,9 @@ def to_canonical(raw: pd.DataFrame) -> pd.DataFrame:
     df["area"] = meta["area"]
     df["value"] = df["value"].astype(float)
     df["source"] = source
-    # The strip can list two EUA Future month rows for one (made_on, maturity), differing ~0.05
-    # EUR; the curve needs one anchor each. Keep the higher, deterministically.
-    return df.sort_values(["made_on", "date", "value"]).drop_duplicates(
+    # One anchor per (made_on, maturity): keep the most-liquid contract (max open interest), tie
+    # broken by settlement so it's deterministic regardless of API row order. See the docstring.
+    df["open_interest"] = pd.to_numeric(df["open_interest"], errors="coerce").fillna(0)
+    return df.sort_values(["made_on", "date", "open_interest", "value"]).drop_duplicates(
         subset=["made_on", "date", "series_id"], keep="last"
     )[out_cols]
