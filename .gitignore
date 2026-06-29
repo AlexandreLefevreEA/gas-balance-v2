@@ -51,6 +51,9 @@ web/dist/
 .claude/settings.local.json
 # Worktree-guard runtime locks (one per live session; see .claude/hooks/worktree-lib.ps1)
 .claude/locks/
+# Per-agent git worktrees (whole nested checkouts) + scheduler lock — local, never committed
+.claude/worktrees/
+.claude/scheduled_tasks.lock
 
 # --- Editors / OS ---
 .idea/
