@@ -7,6 +7,7 @@ unqualified queries resolve there.
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from sqlalchemy import MetaData, create_engine, event
@@ -21,7 +22,16 @@ class Base(DeclarativeBase):
     metadata = MetaData(schema=_settings.db_schema)
 
 
-engine = create_engine(_settings.database_url, pool_pre_ping=True, future=True)
+# Pool sized for parallel `etl run all` (ETL_JOBS connector threads, each its own session) plus
+# headroom for the audit-row + transform sessions; harmless for single-threaded callers.
+_jobs = int(os.environ.get("ETL_JOBS", "6"))
+engine = create_engine(
+    _settings.database_url,
+    pool_pre_ping=True,
+    pool_size=max(10, _jobs + 5),
+    max_overflow=20,
+    future=True,
+)
 
 
 @event.listens_for(engine, "connect")

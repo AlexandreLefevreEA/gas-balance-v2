@@ -72,3 +72,8 @@ def test_absurd_value_is_blocked() -> None:
     df = spot.to_canonical(_raw([("FR", 1e9)]))  # e.g. a EUR/kWh-vs-EUR/MWh scale mistake
     with pytest.raises(pa_errors.SchemaErrors):
         schema.validate(df, lazy=True)
+
+
+def test_scarcity_spike_is_allowed() -> None:
+    # A real SDAC scarcity print (6101.78 EUR/MWh, in the 2022 history) must pass the band.
+    schema.validate(spot.to_canonical(_raw([("FR", 6101.78)])), lazy=True)  # no raise

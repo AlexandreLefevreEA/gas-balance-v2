@@ -39,6 +39,7 @@ log = logging.getLogger(__name__)
 # --- connector interface (read by the CLI registry) -------------------------
 source = "carbon_curve"
 schema = forecast_covariate_carbon_schema
+is_transform = True  # reads raw outputs from Postgres -> the CLI runs it after the raw phase
 
 _CODE = "KP.CARBON.CURVE"
 _SPOT_CODE = "KP.CARBON.SPOT"  # covariate, loaded by kpler_carbon_spot

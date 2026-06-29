@@ -32,9 +32,12 @@ connectors).
   `EEX EUA Future` (EUR/tCO2, the EU ETS1 allowance — **what we keep**), `EEX EU ETS2 Future`
   (EUR/EUA2, the new buildings/transport scheme) and `EEX UKA Futures` (GBP/UKA, UK allowance).
   We filter on `longName == "EEX EUA Future"`.
-- `maturityDate` is the 1st of the contract month; the front contract can predate `tradingDate`.
-  We store every EUA anchor as-is — the `carbon_curve` transform drops past maturities when it
-  builds the spline (the spot is the near anchor there).
+- The delivery month is taken from the **product code** (e.g. `/E.FEUAU25` = Sep-25, standard
+  futures month letters F..Z), NOT Kpler's `maturityDate` — which is occasionally shifted a month
+  (it stamps both the Sep contract `/E.FEUAU25` and the Oct `/E.FEUAV25` as `2025-10-01`) and would
+  collide two distinct contracts on one node. `maturityDate` is only a fallback if a code won't
+  parse. The front contract can predate `tradingDate`; the `carbon_curve` transform drops past
+  maturities when it splines (the spot is the near anchor there).
 - Transient `502`/`429` are handled by the shared `arequest` retry/backoff.
 """
 
@@ -88,6 +91,27 @@ _CONCURRENCY = 8
 # ponytail: no _HISTORY_START floor. EUA futures history is deep (anchors returned for 2023→now),
 # so the trailing-year Monday keep-set is fully covered; weekend/holiday trading dates return 0 rows
 # and get harmlessly re-requested each run.
+
+# Standard futures delivery-month codes (the letter in an EEX product like /E.FEUA<letter><yy>).
+_MONTH_CODES = {
+    "F": 1, "G": 2, "H": 3, "J": 4, "K": 5, "M": 6,
+    "N": 7, "Q": 8, "U": 9, "V": 10, "X": 11, "Z": 12,
+}  # fmt: skip
+
+
+def _delivery_month(product: object) -> pd.Timestamp | None:
+    """First of the contract's delivery month from the EEX product code (e.g. /E.FEUAU25 -> Sep-25).
+
+    The trailing `<letter><yy>` encodes month+year (U=Sep, V=Oct, ...). This is the reliable key:
+    Kpler's `maturityDate` is occasionally shifted a month, so two contracts can collide on it.
+    Returns None if the code can't be parsed (caller falls back to `maturityDate`).
+    """
+    if not isinstance(product, str):
+        return None
+    tail = product.rsplit("FEUA", 1)[-1]  # "/E.FEUAU25" -> "U25"
+    if len(tail) >= 3 and tail[0] in _MONTH_CODES and tail[1:3].isdigit():
+        return pd.Timestamp(year=2000 + int(tail[1:3]), month=_MONTH_CODES[tail[0]], day=1)
+    return None
 
 
 def series_dict() -> list[dict[str, Any]]:
@@ -147,7 +171,7 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
     refresh = {today - dt.timedelta(days=i) for i in range(_REFRESH_DAYS)}
     trading_dates = sorted((desired - have) | (desired & refresh))
 
-    cols = ["date", "long_name", "maturity_type", "value", "made_on"]
+    cols = ["product", "maturity_raw", "long_name", "maturity_type", "value", "made_on"]
     if not trading_dates:
         return pd.DataFrame(columns=cols)
     log.info(
@@ -161,20 +185,22 @@ def fetch(since: dt.date | None = None) -> pd.DataFrame:
 
     df = pd.DataFrame(rows, columns=cols)
     if not df.empty:
-        # `maturityDate` / `tradingDate` are plain "YYYY-MM-DD"; canonical columns are naive UTC.
-        df["date"] = pd.to_datetime(df["date"])
+        # `tradingDate` is a plain "YYYY-MM-DD" (naive UTC). The delivery `date` is derived from the
+        # product code in to_canonical (maturity_raw is only a fallback), so it isn't parsed here.
         df["made_on"] = pd.to_datetime(df["made_on"])
     return df
 
 
 async def _fetch_rows(
     cfg: KplerSettings, trading_dates: list[dt.date]
-) -> list[tuple[Any, Any, Any, Any, str]]:
+) -> list[tuple[Any, Any, Any, Any, Any, str]]:
     """Fan out one request per trading date concurrently (bounded), collect raw settlement rows.
 
     Every emissions product (EUA / ETS2 / UKA) is returned as-is and discriminated in
-    `to_canonical` (so the EUA filter is unit-testable). A `_CONCURRENCY` semaphore caps in-flight
-    requests; `arequest` handles 429/5xx retries underneath. Non-trading days return an empty list.
+    `to_canonical` (so the EUA filter is unit-testable). The `product` code is carried so
+    `to_canonical` can take the true delivery month from it (Kpler's `maturityDate` is unreliable).
+    A `_CONCURRENCY` semaphore caps in-flight requests; `arequest` handles 429/5xx retries
+    underneath. Non-trading days return an empty list.
     """
     sem = asyncio.Semaphore(_CONCURRENCY)
 
@@ -184,7 +210,7 @@ async def _fetch_rows(
         timeout=180.0,
     ) as client:
 
-        async def one(td: dt.date) -> list[tuple[Any, Any, Any, Any, str]]:
+        async def one(td: dt.date) -> list[tuple[Any, Any, Any, Any, Any, str]]:
             async with sem:
                 resp = await arequest(
                     client,
@@ -194,6 +220,7 @@ async def _fetch_rows(
                 )
             return [
                 (
+                    d.get("product"),
                     d.get("maturityDate"),
                     d.get("longName"),
                     d.get("maturityType"),
@@ -213,6 +240,12 @@ def to_canonical(raw: pd.DataFrame) -> pd.DataFrame:
     Drops the other emissions products (`EEX EU ETS2 Future`, `EEX UKA Futures`), non-monthly
     contracts, and null settlements. No interpolation — anchors are stored raw (the `carbon_curve`
     transform splines them).
+
+    The delivery node (`date`) is the 1st of the contract's month, taken from the **product code**
+    (e.g. /E.FEUAU25 = Sep-25). Kpler's `maturityDate` is occasionally shifted a month — it stamps
+    both the Sep contract /E.FEUAU25 and the Oct /E.FEUAV25 as 2025-10-01 — which would collide two
+    distinct contracts on one node; the product code keys each onto its own month. `maturityDate`
+    is only a fallback when a product code can't be parsed.
     """
     out_cols = [
         "date",
@@ -231,6 +264,12 @@ def to_canonical(raw: pd.DataFrame) -> pd.DataFrame:
     df = df[df["value"].notna()].copy()
     if df.empty:
         return pd.DataFrame(columns=out_cols)
+    # Delivery node from the product code; fall back to Kpler's maturityDate only if it won't parse.
+    df["date"] = pd.to_datetime(df["product"].map(_delivery_month))
+    df["date"] = df["date"].fillna(pd.to_datetime(df["maturity_raw"], errors="coerce"))
+    df = df[df["date"].notna()].copy()
+    if df.empty:
+        return pd.DataFrame(columns=out_cols)
     meta = series_dict()[0]
     df["series_id"] = meta["code"]
     df["name"] = meta["name"]
@@ -239,4 +278,8 @@ def to_canonical(raw: pd.DataFrame) -> pd.DataFrame:
     df["area"] = meta["area"]
     df["value"] = df["value"].astype(float)
     df["source"] = source
-    return df[out_cols]
+    # Safety net: the product code makes (made_on, date) unique in practice; if a maturityDate
+    # fallback ever collides, drop deterministically so unique(made_on, date, series_id) holds.
+    return df.sort_values(["made_on", "date", "value"]).drop_duplicates(
+        subset=["made_on", "date", "series_id"], keep="last"
+    )[out_cols]

@@ -51,3 +51,11 @@ def test_absurd_value_is_blocked() -> None:
     df = carbon.to_canonical(_raw([("SEME", 1e6)]))  # e.g. a scale mistake
     with pytest.raises(pa_errors.SchemaErrors):
         schema.validate(df, lazy=True)
+
+
+def test_duplicate_trading_day_deduped() -> None:
+    # Around holidays the feed echoes a prior trading day, so the same (date, series) recurs;
+    # to_canonical dedupes so the canonical unique(date, series_id) holds.
+    df = carbon.to_canonical(_raw([("SEME", 79.7), ("SEME", 79.7)]))
+    assert len(df) == 1
+    schema.validate(df, lazy=True)
