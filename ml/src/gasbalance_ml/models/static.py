@@ -78,13 +78,13 @@ class AveragePlusOutage(Model):
         del X
         h = _history(y)
         self._level = float(h.iloc[-self.window_days :].mean()) if not h.empty else float("nan")
-        if not AveragePlusOutage._warned:
+        if not type(self)._warned:  # per-subclass: Azeri stays silent (it never had a cap)
             log.warning(
                 "average_plus_outage: no gas outage/restricted-capacity feed in v2 -> "
                 "trailing-%dd mean with no capacity cap (legacy parity dropped)",
                 self.window_days,
             )
-            AveragePlusOutage._warned = True
+            type(self)._warned = True
 
     def predict(self, X: pd.DataFrame) -> pd.Series:
         return pd.Series(self._level, index=X.index, dtype=float)
@@ -121,51 +121,37 @@ class SeasonalMean(Model):
 
 
 @register
-class Azeri(Model):
+class Azeri(AveragePlusOutage):
     """Trailing-730d mean (legacy `AzeriModel`). Legacy subtracts scraped AGSC outages; v2 has
-    no such feed (confirmed absent) -> mean only. All-NaN if the source is absent."""
+    no such feed (confirmed absent) -> mean only. Same trailing-mean as `average_plus_outage`,
+    longer default window and no cap-drop warning. All-NaN if the source is absent."""
 
     name = "azeri"
+    _warned = True  # not production — no capacity-cap degradation to warn about
 
     def __init__(self, window_days: int = 730) -> None:
-        self.window_days = window_days
-        self._level = float("nan")
-
-    def fit(self, y: pd.Series, X: pd.DataFrame) -> None:
-        del X
-        h = _history(y)
-        self._level = float(h.iloc[-self.window_days :].mean()) if not h.empty else float("nan")
-
-    def predict(self, X: pd.DataFrame) -> pd.Series:
-        return pd.Series(self._level, index=X.index, dtype=float)
+        super().__init__(window_days)
 
 
 @register
 class BoundedPersistence(Model):
-    """Last value, clipped to [floor, cap] (legacy Kyustendil = Prophet logistic cap/floor).
+    """Last value, floored at `floor` (legacy Kyustendil = Prophet logistic cap/floor).
 
     ponytail: a Prophet logistic-growth fit for one tiny saturating border point isn't worth the
     dependency or the runtime — last-value-with-a-floor keeps the non-negativity that mattered.
-    `cap` is left None (legacy's cap=2 was in its own units); set it if a real ceiling is known.
+    Legacy's cap (cap=2, its own units) is dropped; add a cap back if a real ceiling is known.
     All-NaN if the source is absent."""
 
     name = "bounded_persistence"
 
-    def __init__(self, floor: float = 0.0, cap: float | None = None) -> None:
+    def __init__(self, floor: float = 0.0) -> None:
         self.floor = floor
-        self.cap = cap
         self._val = float("nan")
 
     def fit(self, y: pd.Series, X: pd.DataFrame) -> None:
         del X
         h = _history(y)
-        if h.empty:
-            self._val = float("nan")
-            return
-        v = float(h.iloc[-1])
-        if self.cap is not None:
-            v = min(v, self.cap)
-        self._val = max(v, self.floor)
+        self._val = max(float(h.iloc[-1]), self.floor) if not h.empty else float("nan")
 
     def predict(self, X: pd.DataFrame) -> pd.Series:
         return pd.Series(self._val, index=X.index, dtype=float)
