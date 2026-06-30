@@ -24,6 +24,7 @@ import pandas as pd
 from gasbalance_ml.data import PostgresData
 from gasbalance_ml.pipelines import balance, custom
 from gasbalance_ml.pipelines.forecast import generate_forecasts, generate_supply_forecasts
+from gasbalance_ml.pipelines.power import generate_covariate_forecasts
 from gasbalance_ml.pipelines.run import Config, run_backtest, run_tune
 from gasbalance_ml.pipelines.select import select_models
 from gasbalance_ml.plan import check_covariates
@@ -215,18 +216,23 @@ def _run_orchestrate(args: argparse.Namespace) -> int:
         log.warning("run: no component forecasts produced")
         return 1
 
-    # 1b) static supply components (production/LNG/linepack/imbalance/...), weather-blind. These
-    #     may carry NaN cells where a source series is absent — passed to close_balance so the
-    #     gap surfaces, then filtered before publish (the forecast table is finite-only).
+    # 1b) static supply components (production/LNG/linepack/imbalance/...), weather-blind, and
+    #     1c) covariate-driven components (GTP, Pirineos, Moffat), per weather scenario. Both may
+    #     carry NaN cells where a source/covariate is absent — passed to close_balance so the gap
+    #     surfaces, then filtered before publish (the forecast table is finite-only).
     supply_rows = generate_supply_forecasts(
         data, plan, weather, pd.Timestamp(made_on), horizon_days=args.horizon, made_on=made_on
     )
-    components = pd.DataFrame(component_rows + supply_rows)
+    covariate_rows = generate_covariate_forecasts(
+        data, plan, weather, pd.Timestamp(made_on), horizon_days=args.horizon, made_on=made_on
+    )
+    extra_rows = supply_rows + covariate_rows
+    components = pd.DataFrame(component_rows + extra_rows)
     catalog = data.read_catalog()
     last_level = _last_actual_level(data)
 
     all_rows: list[dict[str, object]] = list(component_rows)
-    all_rows += [r for r in supply_rows if pd.notna(r["value"])]
+    all_rows += [r for r in extra_rows if pd.notna(r["value"])]
     scenarios: set[str] = set(weather)
 
     # 2) close the balance for each base weather scenario

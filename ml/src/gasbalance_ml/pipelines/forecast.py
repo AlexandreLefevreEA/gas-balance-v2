@@ -45,37 +45,67 @@ _STATIC_MODEL: dict[str, str] = {
 _FORECAST_MODELS = ("EC_46", "EC_AIFS_ENS")
 
 
-def build_scenario_driver(
-    data: DataSource, area: str, scenario_model: str, origin: pd.Timestamp
+def build_covariate_driver(
+    data: DataSource,
+    origin: pd.Timestamp,
+    *,
+    actual: str | None,
+    forecasts: Sequence[str] = (),
+    climatology: str | None = None,
 ) -> pd.Series:
-    """The blended temperature driver for one (area, scenario) at `origin`, by priority:
+    """Blend one covariate into a daily driver over history+future at `origin`, by priority:
 
-      actual      : `KP.TEMP.<area>`, dates < origin
-      AIFS ENS    : `KP.TEMPFC.<area>.EC_AIFS_ENS`, latest vintage <= origin (~15d, AI ensemble)
-      EC 46       : `KP.TEMPFC.<area>.EC_46`, latest vintage <= origin (~46d extended)
-      normal / yr : `KP.TEMPLT.<area>.<scenario_model>` for the rest of the horizon
-                    (MEAN = normal, REF_<year> = a weather-year replay)
+      actual      : `actual` code, dates < origin (the realized history)
+      forecasts   : each `forecasts` vintage, latest <= origin, overlaid LOW->HIGH priority
+                    (later wins on its window — e.g. [EC_46, EC_AIFS_ENS])
+      climatology : `climatology` code spanning the whole future (the fallback tail)
 
-    The climatology spans the whole future (full horizon coverage); each forecast overlays it
-    on the dates it covers, highest fidelity winning (AIFS ENS over EC 46 over climatology). A
-    missing layer is simply skipped, degrading gracefully toward climatology.
-    """
+    Any layer whose code is absent/empty is simply skipped, degrading gracefully toward the
+    climatology (and, if that too is absent, toward just the history). The single blend used
+    by every covariate-driven family (temperature, load, generation, prices, …)."""
     t0 = pd.Timestamp(origin).normalize()
     # Guard each read: an absent series is empty with a RangeIndex, so date-comparison
     # filtering must be skipped (it would raise on the int index).
-    actual = data.read_daily_actual(f"KP.TEMP.{area}")
-    history = actual[actual.index < t0] if not actual.empty else actual
+    history = pd.Series(dtype=float)
+    if actual:
+        a = data.read_daily_actual(actual)
+        history = a[a.index < t0] if not a.empty else a
 
-    climatology = data.read_daily_actual(f"KP.TEMPLT.{area}.{scenario_model}")
-    future = climatology[climatology.index >= t0].copy() if not climatology.empty else climatology
+    future = pd.Series(dtype=float)
+    if climatology:
+        c = data.read_daily_actual(climatology)
+        future = c[c.index >= t0].copy() if not c.empty else c
 
-    for fc_model in _FORECAST_MODELS:  # low -> high priority; the later overlay wins
-        fc = data.read_daily_vintage(f"KP.TEMPFC.{area}.{fc_model}", t0)
-        if not fc.empty and not future.empty:
-            future.update(fc[fc.index >= t0])
+    for code in forecasts:  # low -> high priority; the later overlay wins
+        fc = data.read_daily_vintage(code, t0)
+        if fc.empty:
+            continue
+        fc = fc[fc.index >= t0]
+        # With a climatology canvas, overlay onto it (its dates only). Without one (e.g. a price
+        # forward curve, which IS the future), the first forecast becomes the future canvas.
+        if future.empty:
+            future = fc.copy()
+        else:
+            future.update(fc)
 
     driver = pd.concat([history, future]).sort_index()
     return driver[~driver.index.duplicated(keep="first")]
+
+
+def build_scenario_driver(
+    data: DataSource, area: str, scenario_model: str, origin: pd.Timestamp
+) -> pd.Series:
+    """The blended temperature driver for one (area, scenario): actual `KP.TEMP.<area>`, then
+    `KP.TEMPFC.<area>.{EC_46,EC_AIFS_ENS}` vintages (AIFS ENS wins the front ~15d, EC 46 fills
+    to ~46d), then `KP.TEMPLT.<area>.<scenario_model>` climatology for the tail (MEAN = normal,
+    REF_<year> = a weather-year replay). A thin wrapper over `build_covariate_driver`."""
+    return build_covariate_driver(
+        data,
+        origin,
+        actual=f"KP.TEMP.{area}",
+        forecasts=[f"KP.TEMPFC.{area}.{m}" for m in _FORECAST_MODELS],
+        climatology=f"KP.TEMPLT.{area}.{scenario_model}",
+    )
 
 
 def generate_forecasts(

@@ -14,8 +14,9 @@ EU.BALANCE is therefore identically 0 on forecasts (the plug closes it) and is n
 
 Pure arithmetic — no DB, no model — so it's unit-testable on hand-built frames
 (ml/tests/test_balance.py). The caller (cli.py) assembles the inputs via PostgresData.
-Supply forecasting is a separate workstream; until it lands, supply components are absent
-and withdrawal degenerates to demand.
+Each side is summed with **skipna=False**: a component that is present but NaN on a date makes
+that date's aggregate NaN (emitted as a gap, never a silently-low total). A side with *no*
+components at all still degrades to 0 (e.g. before the supply workstream is wired).
 """
 
 from __future__ import annotations
