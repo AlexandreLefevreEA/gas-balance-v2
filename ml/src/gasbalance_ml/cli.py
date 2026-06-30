@@ -26,6 +26,7 @@ from gasbalance_ml.pipelines import balance, custom
 from gasbalance_ml.pipelines.forecast import generate_forecasts
 from gasbalance_ml.pipelines.run import Config, run_backtest, run_tune
 from gasbalance_ml.pipelines.select import select_models
+from gasbalance_ml.plan import check_covariates
 from gasbalance_ml.publish import publish_forecasts
 from gasbalance_ml.registry import DEFAULT_PATH, load_registry, save_registry
 
@@ -184,6 +185,9 @@ def _run_orchestrate(args: argparse.Namespace) -> int:
     refit) -> publish. Customs re-store only the series they touch; everything else falls
     back to its base weather scenario."""
     data = PostgresData()
+    # Covariate-readiness report up front (Germany first): warn for any forecastable component
+    # whose required driver is missing, before we spend time fitting.
+    check_covariates(data.read_forecast_plan(), data.present_codes)
     registry = load_registry(Path(args.registry))
     if not registry:
         log.warning("run: empty registry (run `ml select` first)")

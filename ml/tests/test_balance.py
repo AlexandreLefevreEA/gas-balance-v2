@@ -47,7 +47,32 @@ def test_supply_absent_degrades_to_demand() -> None:
     assert _by(rows, "EU.STORAGE.LEVEL")[DATES[2]] == -300.0  # 0 - 300, no clamp (legacy parity)
 
 
+def test_incomplete_component_becomes_a_gap_not_a_low_total() -> None:
+    # Two supply series; the second is missing on DATES[1] -> that date's EU.SUPPLY must be a
+    # GAP (no row), not 60 (which would silently omit the missing component).
+    catalog = {
+        "D": ("demand", "LDZ", "DE"),
+        "S1": ("production", None, "NL"),
+        "S2": ("lng", None, "GB"),
+    }
+    rows_in = [
+        {"series_code": "D", "scenario": "MEAN", "target_date": d, "value": 100.0} for d in DATES
+    ]
+    for d in DATES:
+        rows_in.append({"series_code": "S1", "scenario": "MEAN", "target_date": d, "value": 30.0})
+    for d in (DATES[0], DATES[2]):  # S2 absent on DATES[1]
+        rows_in.append({"series_code": "S2", "scenario": "MEAN", "target_date": d, "value": 30.0})
+
+    rows = close_balance(pd.DataFrame(rows_in), catalog, None, made_on=MADE)
+    supply = _by(rows, "EU.SUPPLY")
+    assert supply[DATES[0]] == 60.0 and supply[DATES[2]] == 60.0
+    assert DATES[1] not in supply  # gap, not 30
+    # withdrawal/level past the gap are unknowable -> also gaps (level cumsums through NaN).
+    assert DATES[1] not in _by(rows, "EU.STORAGE.WITHDRAWAL")
+
+
 if __name__ == "__main__":
     test_withdrawal_and_level_path()
     test_supply_absent_degrades_to_demand()
+    test_incomplete_component_becomes_a_gap_not_a_low_total()
     print("ok")

@@ -15,10 +15,13 @@ Driver reads collapse hourly source data to a daily mean (the grain the features
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-from sqlalchemy import select
+from sqlalchemy import or_, select
+
+from gasbalance_ml.plan import PlanRow, family_of
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -115,6 +118,56 @@ class PostgresData:
                 .order_by(Series.code)
             ).all()
         return [(str(code), str(area)) for code, area in rows]
+
+    def read_forecast_plan(self) -> list[PlanRow]:
+        """Every forecastable component tagged with its model family — the legacy name-based
+        dispatch (`plan.family_of`), replicated. Reads the raw (non-derived) active dictionary
+        and drops series legacy never forecast (family None: most pipelines, generic border
+        flows, storage withdrawal/level which are the closure residual)."""
+        from gasbalance_core.db import SessionLocal
+        from gasbalance_core.models import Series
+
+        with SessionLocal() as session:
+            rows = session.execute(
+                select(Series.code, Series.name, Series.category, Series.sub_group, Series.area)
+                .where(Series.is_active.is_(True), Series.is_derived.is_(False))
+                .order_by(Series.code)
+            ).all()
+        plan: list[PlanRow] = []
+        for code, name, category, sub_group, area in rows:
+            family = family_of(str(name), category, sub_group)
+            if family is not None:
+                plan.append(PlanRow(code=str(code), name=str(name), area=area, family=family))
+        return plan
+
+    def present_codes(self, codes: Iterable[str]) -> set[str]:
+        """The subset of `codes` that exist in the dictionary AND have data (a `covariate`,
+        `forecast_covariate`, or `observation` row). Backs the covariate-presence warning —
+        a code absent from this set is what we warn about."""
+        wanted = list(dict.fromkeys(codes))
+        if not wanted:
+            return set()
+        from gasbalance_core.db import SessionLocal
+        from gasbalance_core.models import Covariate, ForecastCovariate, Observation, Series
+
+        with SessionLocal() as session:
+            rows = session.execute(
+                select(Series.code).where(
+                    Series.code.in_(wanted),
+                    or_(
+                        select(Covariate.series_id)
+                        .where(Covariate.series_id == Series.id)
+                        .exists(),
+                        select(ForecastCovariate.series_id)
+                        .where(ForecastCovariate.series_id == Series.id)
+                        .exists(),
+                        select(Observation.series_id)
+                        .where(Observation.series_id == Series.id)
+                        .exists(),
+                    ),
+                )
+            ).all()
+        return {str(code) for (code,) in rows}
 
     def read_scenario_models(self) -> list[str]:
         """The weather-scenario MODEL tokens present in the long-term temp dictionary.

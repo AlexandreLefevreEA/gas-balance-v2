@@ -21,9 +21,12 @@ and withdrawal degenerates to demand.
 from __future__ import annotations
 
 import datetime as dt
+import logging
 from collections.abc import Mapping
 
 import pandas as pd
+
+log = logging.getLogger(__name__)
 
 # Derived output series — already in the `series` table (etl derived.yaml, is_derived=true).
 DEMAND = "EU.DEMAND"
@@ -45,6 +48,19 @@ def _side(category: str | None, sub_group: str | None) -> str | None:
     if category == "lng" and sub_group is None:  # LNG sendout (not level/capacity)
         return "supply"
     return None
+
+
+def _side_total(side_df: pd.DataFrame) -> pd.Series:
+    """Sum one balance side's components per date with **skipna=False**: a component that is
+    missing or NaN for a date makes that date's total NaN (surfaced downstream as a gap),
+    never a silently-low sum that omits the missing series. Empty side -> empty (the caller
+    degrades a side with *no* components at all to 0)."""
+    if side_df.empty:
+        return pd.Series(dtype=float)
+    wide = side_df.pivot_table(
+        index="target_date", columns="series_code", values="value", aggfunc="sum", dropna=False
+    )
+    return wide.sum(axis=1, skipna=False)
 
 
 def _level_path(withdrawal: pd.Series, last_level: tuple[dt.date, float] | None) -> pd.Series:
@@ -78,12 +94,17 @@ def close_balance(
     comp["_side"] = comp["series_code"].map(side_of)
 
     rows: list[dict[str, object]] = []
+    skipped = 0
     for scenario, grp in comp.groupby("scenario", sort=True):
-        demand = grp.loc[grp["_side"] == "demand"].groupby("target_date")["value"].sum()
-        supply = grp.loc[grp["_side"] == "supply"].groupby("target_date")["value"].sum()
+        demand_df = grp.loc[grp["_side"] == "demand"]
+        supply_df = grp.loc[grp["_side"] == "supply"]
+        demand = _side_total(demand_df)
+        supply = _side_total(supply_df)
         dates = demand.index.union(supply.index)
-        demand = demand.reindex(dates, fill_value=0.0)
-        supply = supply.reindex(dates, fill_value=0.0)
+        # A side with *no* components at all is "not forecast yet" -> 0 (degrade, legacy parity).
+        # A side that HAS components but is incomplete on a date stays NaN -> emitted as a gap.
+        demand = pd.Series(0.0, index=dates) if demand_df.empty else demand.reindex(dates)
+        supply = pd.Series(0.0, index=dates) if supply_df.empty else supply.reindex(dates)
         # ponytail: sign per the user's equation (withdrawal = demand - supply); one line to
         # flip if EU.BALANCE doesn't close once supply lands (derived.yaml:62-64 flags it).
         withdrawal = demand - supply
@@ -95,6 +116,9 @@ def close_balance(
             (LEVEL, level),
         ):
             for date, value in series.items():
+                if pd.isna(value):  # incomplete component -> NaN -> gap, not a silently-low cell
+                    skipped += 1
+                    continue
                 rows.append(
                     {
                         "series_code": code,
@@ -105,4 +129,9 @@ def close_balance(
                         "value": float(value),
                     }
                 )
+    if skipped:
+        log.warning(
+            "close_balance: %d EU cells incomplete (a component series is missing) -> left as gaps",
+            skipped,
+        )
     return rows
