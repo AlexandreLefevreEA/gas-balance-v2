@@ -7,6 +7,7 @@ floor: bad data physically cannot land. See docs/data-contracts.md.
 from __future__ import annotations
 
 import datetime as dt
+from typing import Any
 
 from sqlalchemy import (
     BigInteger,
@@ -24,6 +25,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from gasbalance_core.db import Base
@@ -91,13 +93,24 @@ class Series(Base):
 
 
 class Scenario(Base):
-    """Forecast scenarios (normal, weather replays, custom)."""
+    """Forecast scenarios — weather replays (auto-seeded) and custom what-ifs (authored).
+
+    `kind='weather'`: `MEAN`/`REF_<year>` temperature paths, seeded at forecast publish.
+    `kind='custom'`: either an authored *definition* row (`adjustments` set, e.g. "EU demand
+    +10%") that the running layer reads, or a materialized *combo* row (`<custom>@<weather>`,
+    `adjustments` NULL) created as an FK target for its forecast rows. `@` is the separator.
+    """
 
     __tablename__ = "scenario"
 
     code: Mapped[str] = mapped_column(Text, primary_key=True)
     description: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    kind: Mapped[str] = mapped_column(Text, nullable=False, server_default="weather")
+    # custom *definition* rows only — the adjustment rules and which weather scenarios they
+    # span (`["*"]` = all). NULL for weather rows and materialized combos.
+    adjustments: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
+    weather_years: Mapped[list[str] | None] = mapped_column(JSONB)
 
 
 class Observation(Base):

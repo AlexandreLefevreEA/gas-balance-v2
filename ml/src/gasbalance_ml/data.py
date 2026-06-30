@@ -129,3 +129,37 @@ class PostgresData:
         with SessionLocal() as session:
             rows = session.execute(select(Series.code).where(Series.code.like("KP.TEMPLT.%"))).all()
         return sorted({str(code).rsplit(".", 1)[-1] for (code,) in rows})
+
+    def read_catalog(self) -> dict[str, tuple[str | None, str | None, str | None]]:
+        """`code -> (category, sub_group, area)` for raw (is_derived=false) series — the
+        component classification the balance closure and custom selectors need."""
+        from gasbalance_core.db import SessionLocal
+        from gasbalance_core.models import Series
+
+        with SessionLocal() as session:
+            rows = session.execute(
+                select(Series.code, Series.category, Series.sub_group, Series.area).where(
+                    Series.is_derived.is_(False)
+                )
+            ).all()
+        return {str(code): (cat, sg, ar) for code, cat, sg, ar in rows}
+
+    def read_customs(self) -> list[dict[str, Any]]:
+        """Authored custom scenarios — `scenario` rows with `kind='custom'` and a non-NULL
+        `adjustments` (the definition rows; materialized `<custom>@<weather>` combos have NULL
+        adjustments and are excluded). Each -> `{code, adjustments, weather_years}`."""
+        from gasbalance_core.db import SessionLocal
+        from gasbalance_core.models import Scenario
+
+        with SessionLocal() as session:
+            rows = session.execute(
+                select(Scenario.code, Scenario.adjustments, Scenario.weather_years).where(
+                    Scenario.kind == "custom",
+                    Scenario.adjustments.is_not(None),
+                    Scenario.is_active.is_(True),
+                )
+            ).all()
+        return [
+            {"code": str(code), "adjustments": adj or [], "weather_years": wy or ["*"]}
+            for code, adj, wy in rows
+        ]

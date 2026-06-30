@@ -13,6 +13,7 @@ the engine (same convention as `data.py`).
 from __future__ import annotations
 
 import datetime as dt
+import logging
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
@@ -22,7 +23,12 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
-_BATCH = 10000  # same sizing rationale as etl/load/upsert.py
+log = logging.getLogger(__name__)
+
+# Postgres caps one statement at 65535 bound parameters; `pg_insert().values()` binds every
+# column of every row, so rows-per-INSERT must stay under 65535 / n_columns. (etl sidesteps
+# this with COPY; if forecast volume grows, port that path here — see module docstring.)
+_PG_MAX_PARAMS = 65535
 
 
 def _describe(code: str) -> str:
@@ -30,15 +36,23 @@ def _describe(code: str) -> str:
         return "Climatological-normal weather"
     if code.startswith("REF_"):
         return f"Weather replay of {code[4:]}"
+    if "@" in code:  # materialized custom combo, <custom>@<weather>
+        custom, weather = code.split("@", 1)
+        return f"Custom '{custom}' on {_describe(weather)}"
     return code
 
 
 def ensure_scenarios(session: Session, codes: Iterable[str]) -> None:
     """Upsert the `scenario` rows the forecasts reference (FK), without clobbering existing
-    descriptions/flags (`do_nothing` on conflict)."""
+    descriptions/flags (`do_nothing` on conflict). A `<custom>@<weather>` combo is tagged
+    `kind='custom'`; everything else is a weather row. Authored custom *definition* rows
+    (with `adjustments`) are written elsewhere and never appear here as forecast keys."""
     from gasbalance_core.models import Scenario
 
-    rows = [{"code": c, "description": _describe(c)} for c in dict.fromkeys(codes)]
+    rows = [
+        {"code": c, "description": _describe(c), "kind": "custom" if "@" in c else "weather"}
+        for c in dict.fromkeys(codes)
+    ]
     if not rows:
         return
     session.execute(
@@ -102,13 +116,21 @@ def upsert_forecasts(
                 "run_id": run_id,
             }
         )
+    if not payload:
+        return 0
+
+    # Last-wins dedup on the 5-col PK: two rows with the same key in one INSERT would trip
+    # ON CONFLICT's "cannot affect row a second time" (mirrors etl/load/upsert.py).
+    pk = ("series_id", "target_date", "scenario", "model_run_id", "made_on")
+    payload = list({tuple(r[k] for k in pk): r for r in payload}.values())
+    batch = max(1, _PG_MAX_PARAMS // len(payload[0]))  # keep rows*cols under the param cap
 
     written = 0
-    for i in range(0, len(payload), _BATCH):
-        chunk = payload[i : i + _BATCH]
+    for i in range(0, len(payload), batch):
+        chunk = payload[i : i + batch]
         stmt = pg_insert(Forecast).values(chunk)
         stmt = stmt.on_conflict_do_update(
-            index_elements=["series_id", "target_date", "scenario", "model_run_id", "made_on"],
+            index_elements=list(pk),
             set_={"value": stmt.excluded.value, "run_id": stmt.excluded.run_id},
         )
         session.execute(stmt)
@@ -135,7 +157,10 @@ def publish_forecasts(
             session.commit()
         except Exception as exc:
             session.rollback()
-            close_forecast_run(session, run_id, "failed", str(exc)[:500])
+            # exc.orig is the concise psycopg message; str(exc) drags in the full param dump.
+            msg = str(getattr(exc, "orig", None) or exc)
+            log.error("publish_forecasts failed: %s", msg)
+            close_forecast_run(session, run_id, "failed", msg[:500])
             session.commit()
             raise
     return {"run_id": run_id, "rows": written}

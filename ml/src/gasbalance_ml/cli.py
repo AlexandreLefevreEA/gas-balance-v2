@@ -22,6 +22,7 @@ from pathlib import Path
 import pandas as pd
 
 from gasbalance_ml.data import PostgresData
+from gasbalance_ml.pipelines import balance, custom
 from gasbalance_ml.pipelines.forecast import generate_forecasts
 from gasbalance_ml.pipelines.run import Config, run_backtest, run_tune
 from gasbalance_ml.pipelines.select import select_models
@@ -165,10 +166,96 @@ def _run_forecast(args: argparse.Namespace) -> int:
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+def _last_actual_level(data: PostgresData) -> tuple[dt.date, float] | None:
+    """Last realized EU storage level — the anchor the forecast level path cumsums from.
+    Absent until the etl derived stage materializes EU.STORAGE.LEVEL -> start the path at 0."""
+    try:
+        actual = data.read_target(balance.LEVEL).dropna()
+    except KeyError:
+        return None
+    if actual.empty:
+        return None
+    return (actual.index[-1].date(), float(actual.iloc[-1]))
+
+
+def _run_orchestrate(args: argparse.Namespace) -> int:
+    """The full balance run: base demand forecasts (expensive ML, once per weather year) ->
+    close the EU balance per weather scenario -> layer each custom what-if (arithmetic, no
+    refit) -> publish. Customs re-store only the series they touch; everything else falls
+    back to its base weather scenario."""
+    data = PostgresData()
+    registry = load_registry(Path(args.registry))
+    if not registry:
+        log.warning("run: empty registry (run `ml select` first)")
+        return 1
+    made_on = dt.date.fromisoformat(args.made_on) if args.made_on else dt.date.today()
+    weather = data.read_scenario_models()
+    if not weather:
+        log.warning("run: no weather scenarios (no KP.TEMPLT.* series)")
+        return 1
+
+    # 1) base component forecasts (demand today; supply is a separate workstream), per weather
+    #    scenario — fit-once / predict-many, so the cost is series x weather, not x customs.
+    component_rows = generate_forecasts(
+        data,
+        registry,
+        weather,
+        pd.Timestamp(made_on),
+        horizon_days=args.horizon,
+        made_on=made_on,
+        window=args.window,
+        sliding_years=args.sliding_years,
     )
+    if not component_rows:
+        log.warning("run: no component forecasts produced")
+        return 1
+    components = pd.DataFrame(component_rows)
+    catalog = data.read_catalog()
+    last_level = _last_actual_level(data)
+
+    all_rows: list[dict[str, object]] = list(component_rows)
+    scenarios: set[str] = set(weather)
+
+    # 2) close the balance for each base weather scenario
+    all_rows += balance.close_balance(components, catalog, last_level, made_on=made_on)
+
+    # 3) custom what-ifs: arithmetic overlay on the base components + re-close (never refits)
+    for cust in data.read_customs():
+        wanted = cust["weather_years"]
+        years = weather if "*" in wanted else [w for w in wanted if w in weather]
+        for w in years:
+            base = components[components["scenario"] == w]
+            if base.empty:
+                continue
+            adjusted, touched = custom.apply_adjustments(base, cust["adjustments"], catalog)
+            combo = f"{cust['code']}@{w}"
+            adjusted = adjusted.assign(scenario=combo)
+            # store only the series the custom changed; untouched fall back to base weather
+            all_rows += adjusted[adjusted["series_code"].isin(touched)].to_dict("records")
+            all_rows += balance.close_balance(adjusted, catalog, last_level, made_on=made_on)
+            scenarios.add(combo)
+
+    if args.no_write:
+        summary = pd.DataFrame(all_rows).groupby("scenario")["value"].agg(["count"])
+        print(summary.to_string())
+        return 0
+    res = publish_forecasts(all_rows, scenarios)
+    log.info(
+        "run made_on=%s: wrote %d rows across %d scenarios (forecast_run %d)",
+        made_on,
+        res["rows"],
+        len(scenarios),
+        res["run_id"],
+    )
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    # Root at WARNING so third-party libs stay quiet; our own package logs at INFO.
+    logging.basicConfig(
+        level=logging.WARNING, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    )
+    logging.getLogger("gasbalance_ml").setLevel(logging.INFO)
     parser = argparse.ArgumentParser(prog="ml")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -196,11 +283,23 @@ def main(argv: list[str] | None = None) -> int:
     fc_p.add_argument("--sliding-years", type=int, default=5)
     fc_p.add_argument("--no-write", action="store_true", help="print a summary, write nothing")
 
+    run_p = sub.add_parser(
+        "run", help="forecast all weather years + close the balance + apply customs"
+    )
+    run_p.add_argument("--made-on", help="run date / origin (YYYY-MM-DD; default today)")
+    run_p.add_argument("--horizon", type=int, default=720, help="forecast horizon in days")
+    run_p.add_argument("--registry", default=str(DEFAULT_PATH), help="registry YAML path")
+    run_p.add_argument("--window", default="expanding", choices=["expanding", "sliding"])
+    run_p.add_argument("--sliding-years", type=int, default=5)
+    run_p.add_argument("--no-write", action="store_true", help="print a summary, write nothing")
+
     args = parser.parse_args(argv)
     if args.cmd in ("backtest", "tune"):
         return _run_backtest_or_tune(args)
     if args.cmd == "select":
         return _run_select(args)
+    if args.cmd == "run":
+        return _run_orchestrate(args)
     return _run_forecast(args)
 
 

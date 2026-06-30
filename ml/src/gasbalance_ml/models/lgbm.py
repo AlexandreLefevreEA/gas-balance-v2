@@ -38,10 +38,12 @@ class LightGBMModel(Model):
         import lightgbm as lgb
 
         self._model = lgb.LGBMRegressor(**self.params)
-        self._model.fit(X.to_numpy(), y.to_numpy())
+        # Keep the DataFrame (named features) on both fit and predict — passing a bare ndarray
+        # on one side and not the other is what triggers sklearn's feature-name mismatch warning.
+        self._model.fit(X, y)
 
     def predict(self, X: pd.DataFrame) -> pd.Series:
         if self._model is None:
             raise RuntimeError("LightGBMModel.predict called before fit")
-        preds = self._model.predict(X.to_numpy())
+        preds = self._model.predict(X)
         return pd.Series(preds, index=X.index, dtype=float)

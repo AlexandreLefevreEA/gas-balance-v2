@@ -83,6 +83,7 @@ def generate_forecasts(
     stamp = made_on or t0.date()
     driver_cache: dict[tuple[str, str], pd.Series] = {}
     rows: list[dict[str, Any]] = []
+    skipped: list[str] = []
 
     for code, entry in registry.items():
         area = entry["area"]
@@ -92,7 +93,7 @@ def generate_forecasts(
 
         target = data.read_target(code)
         if target.empty:
-            log.warning("forecast %s: no actuals, skipping", code)
+            skipped.append(code)
             continue
 
         drivers: dict[str, pd.Series] = {}
@@ -120,6 +121,9 @@ def generate_forecasts(
                         "value": float(value),
                     }
                 )
+    if skipped:
+        log.info("forecast: skipped %d/%d series with no actuals", len(skipped), len(registry))
+        log.debug("forecast: skipped %s", ", ".join(skipped))
     log.info(
         "forecast: %d rows (%d series x %d scenarios)", len(rows), len(registry), len(scenarios)
     )
