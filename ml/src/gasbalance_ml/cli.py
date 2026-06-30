@@ -181,10 +181,11 @@ def _last_actual_level(data: PostgresData) -> tuple[dt.date, float] | None:
 
 
 def _run_orchestrate(args: argparse.Namespace) -> int:
-    """The full balance run: base demand forecasts (expensive ML, once per weather year) ->
+    """The full balance run: covariate-readiness check -> demand forecasts (per weather year) +
+    static supply (production/LNG/linepack/...) + covariate-driven (GTP/Pirineos/Moffat) ->
     close the EU balance per weather scenario -> layer each custom what-if (arithmetic, no
-    refit) -> publish. Customs re-store only the series they touch; everything else falls
-    back to its base weather scenario."""
+    refit) -> publish. Customs re-store only the series they touch; everything else falls back
+    to its base weather scenario. Missing inputs surface as gaps (NaN), not silent low totals."""
     data = PostgresData()
     plan = data.read_forecast_plan()
     # Covariate-readiness report up front (Germany first): warn for any forecastable component
