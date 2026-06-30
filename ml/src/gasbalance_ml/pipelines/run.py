@@ -13,6 +13,7 @@ MLflow logging is optional and lazily imported.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
@@ -22,6 +23,14 @@ import pandas as pd
 from gasbalance_ml.evaluation.metrics import error_surface, mae, skill_score
 from gasbalance_ml.evaluation.walkforward import walk_forward
 from gasbalance_ml.models import get  # importing the package registers the built-in models
+
+# MLflow allows only [alnum _ - . / space] in metric/param names; map the rest to '_' so the
+# `mae_h366+` horizon bucket (the '+' is illegal) doesn't blow up a tracked run -> `mae_h366_`.
+_MLFLOW_NAME = re.compile(r"[^0-9A-Za-z_.\-/ ]")
+
+
+def _mlflow_name(name: str) -> str:
+    return _MLFLOW_NAME.sub("_", name)
 
 
 @dataclass
@@ -84,7 +93,7 @@ def _mlflow_log(cfg: Config, metrics: dict[str, float]) -> str:
         mlflow.log_params(params)
         for key, val in metrics.items():
             if pd.notna(val):
-                mlflow.log_metric(key, float(val))
+                mlflow.log_metric(_mlflow_name(key), float(val))
         return str(run.info.run_id)
 
 

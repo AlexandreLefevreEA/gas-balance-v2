@@ -5,7 +5,13 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from gasbalance_ml.pipelines.run import Config, run_backtest
+from gasbalance_ml.pipelines.run import Config, _mlflow_name, run_backtest
+
+
+def test_mlflow_name_sanitizes_illegal_chars() -> None:
+    assert _mlflow_name("mae_h366+") == "mae_h366_"  # '+' is illegal in MLflow metric names
+    assert _mlflow_name("mae_h2-7") == "mae_h2-7"  # dashes are allowed -> unchanged
+    assert _mlflow_name("skill") == "skill"
 
 
 class FakeData:
