@@ -12,11 +12,17 @@ from gasbalance_ml.plan import PlanRow, check_covariates, family_of, required_co
 
 def test_family_of_dispatch() -> None:
     cases = {
-        # (name, category, sub_group) -> family
-        ("DE LDZ", "demand", "LDZ"): "demand",
-        ("DE IND", "demand", "IND"): "demand",
-        ("CZ Demand", "demand", "total"): "demand",
-        ("DE GTP", "demand", "GTP"): "gtp",
+        # (name, category, sub_group) -> family. NB the loaded dictionary has sub_group=NULL on
+        # the CE demand series, so dispatch is by NAME — these mirror the real rows.
+        ("DE LDZ", "demand", None): "demand",
+        ("DE IND", "demand", None): "demand",
+        ("AT East IND", "demand", None): "demand",
+        ("CZ Demand", "demand", None): "demand",
+        ("AT CE Demand", "demand", None): "demand",
+        ("DE GTP", "demand", None): "gtp",
+        # KP.LOAD.* electricity-load covariates also carry category='demand' but must be excluded
+        # (their name ends in lowercase "power demand", not "Demand"/"LDZ"/"IND"/"GTP").
+        ("DE power demand", "demand", "demand"): None,
         ("DE Prod", "production", None): "average_plus_outage",
         ("DK Biogas Prod", "production", None): "average_plus_outage",
         ("NL LNG", "lng", None): "seasonal_mean",

@@ -95,29 +95,16 @@ class PostgresData:
         return _hourly_to_daily(list(rows))
 
     def read_demand_universe(self) -> list[tuple[str, str]]:
-        """`(code, area)` for the temperature-driven demand series we forecast.
-
-        Structural filter on the dictionary (NOT name matching): `category='demand'`,
-        `sub_group` in the temp-driven set (LDZ/IND/total — GTP is power-driven, deferred),
-        active and not a derived aggregate. `area` is the zone code that keys the
-        temperature drivers (`KP.TEMP.<area>`, `KP.TEMPLT.<area>.<MODEL>`).
-        """
-        from gasbalance_core.db import SessionLocal
-        from gasbalance_core.models import Series
-
-        with SessionLocal() as session:
-            rows = session.execute(
-                select(Series.code, Series.area)
-                .where(
-                    Series.category == "demand",
-                    Series.sub_group.in_(("LDZ", "IND", "total")),
-                    Series.is_active.is_(True),
-                    Series.is_derived.is_(False),
-                    Series.area.is_not(None),
-                )
-                .order_by(Series.code)
-            ).all()
-        return [(str(code), str(area)) for code, area in rows]
+        """`(code, area)` for the temperature-driven demand series `select` runs over — the
+        `demand` family (LDZ/IND/country-total; GTP is power-driven and excluded). Derived from
+        `read_forecast_plan` so the classification is the single source of truth: dispatch is by
+        name suffix, since the dictionary's `sub_group` is unreliable (often NULL in the load).
+        `area` is the zone code that keys the temperature drivers (`KP.TEMP.<area>`)."""
+        return [
+            (r.code, r.area)
+            for r in self.read_forecast_plan()
+            if r.family == "demand" and r.area is not None
+        ]
 
     def read_forecast_plan(self) -> list[PlanRow]:
         """Every forecastable component tagged with its model family — the legacy name-based

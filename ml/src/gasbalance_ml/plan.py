@@ -49,16 +49,21 @@ def family_of(name: str, category: str | None, sub_group: str | None) -> str | N
     """The model family for a component, or None if legacy didn't forecast it (most pipelines,
     generic border flows, storage withdrawal/level — the last two are the balance residual).
 
-    Order matters: a named override wins over the group rule (e.g. Turk Stream is a
-    `border_flows` series but legacy ran the production model on it)."""
+    Order matters: a named override wins over the suffix/group rule (e.g. Turk Stream is a
+    `border_flows` series but legacy ran the production model on it).
+
+    Demand is dispatched by **name suffix** (legacy `forecast_scenario.py` parity), NOT
+    `sub_group`: in the loaded dictionary the CE demand series carry `sub_group=NULL` and their
+    type lives only in the name ("DE LDZ", "DE GTP", "CZ Demand"). The suffix check also excludes
+    the `KP.LOAD.*` electricity-load covariates that share `category='demand'` — their names end
+    in lowercase " power demand", not "LDZ"/"IND"/"GTP"/"Demand". (`sub_group` *is* reliable for
+    lng/storage — level/capacity/withdrawal — so those branches still use it.)"""
     if name in _NAMED:
         return _NAMED[name]
-    if category == "demand":
-        if sub_group in ("LDZ", "IND", "total"):
-            return "demand"  # v2's existing temperature path (LightGBM / seasonal_naive)
-        if sub_group == "GTP":
-            return "gtp"
-        return None
+    if name.endswith("GTP"):
+        return "gtp"  # power-driven
+    if name.endswith(("LDZ", "IND")) or name.endswith("Demand"):
+        return "demand"  # temperature path (LightGBM / seasonal_naive); "Demand" = country total
     if category == "production":
         return "average_plus_outage"
     if category == "lng":
