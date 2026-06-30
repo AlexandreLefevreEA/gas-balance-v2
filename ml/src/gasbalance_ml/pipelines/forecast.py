@@ -23,9 +23,21 @@ import pandas as pd
 
 from gasbalance_ml.evaluation.walkforward import predict_scenarios
 from gasbalance_ml.models import get
+from gasbalance_ml.models.base import Model
 from gasbalance_ml.pipelines.run import DataSource
+from gasbalance_ml.plan import PlanRow
 
 log = logging.getLogger(__name__)
+
+# Static (weather-blind) families forecast from their own history -> family : registered model.
+_STATIC_MODEL: dict[str, str] = {
+    "absolute_zero": "absolute_zero",
+    "average_plus_outage": "average_plus_outage",
+    "seasonal_mean": "seasonal_mean",
+    "azeri": "azeri",
+    "ffill": "ffill",
+    "bounded_persistence": "bounded_persistence",
+}
 
 # Forecast layers overlaid on the climatology base, LOW -> HIGH priority (the later overlay
 # wins): EC_46 (46-day extended) refines ~46d, EC_AIFS_ENS (AI ensemble, ~15d) refines the
@@ -127,4 +139,56 @@ def generate_forecasts(
     log.info(
         "forecast: %d rows (%d series x %d scenarios)", len(rows), len(registry), len(scenarios)
     )
+    return rows
+
+
+def forecast_static(
+    model: Model, target: pd.Series, origin: pd.Timestamp, horizon_days: int
+) -> pd.Series:
+    """Fit a weather-blind model on history < origin and predict [origin, origin+H) over a bare
+    date index (these models read only `X.index`). Empty history -> the model returns all-NaN."""
+    t0 = pd.Timestamp(origin).normalize()
+    history = target[target.index < t0] if not target.empty else target
+    model.fit(history, pd.DataFrame(index=history.index))
+    future_idx = pd.date_range(t0, periods=horizon_days, freq="D")
+    return model.predict(pd.DataFrame(index=future_idx))
+
+
+def generate_supply_forecasts(
+    data: DataSource,
+    plan: Sequence[PlanRow],
+    scenarios: Sequence[str],
+    origin: pd.Timestamp,
+    *,
+    horizon_days: int = 720,
+    made_on: dt.date | None = None,
+) -> list[dict[str, Any]]:
+    """Forecast the static supply families in `plan` (production / LNG sendout / linepack /
+    imbalance / capacity / Azeri), each projected from its own history by its family's model and
+    replicated across every scenario (weather-blind). Emits NaN cells where a source series is
+    absent so `close_balance` surfaces the gap; the publish boundary drops the NaN cells."""
+    t0 = pd.Timestamp(origin).normalize()
+    stamp = made_on or t0.date()
+    rows: list[dict[str, Any]] = []
+    n_series = 0
+    for row in plan:
+        model_name = _STATIC_MODEL.get(row.family)
+        if model_name is None:
+            continue  # demand / gtp / pirineos / moffat are covariate-driven (handled elsewhere)
+        n_series += 1
+        path = forecast_static(get(model_name)(), data.read_target(row.code), t0, horizon_days)
+        model_run_id = f"{model_name}-{stamp}"
+        for date, value in path.items():
+            for scenario in scenarios:
+                rows.append(
+                    {
+                        "series_code": row.code,
+                        "target_date": pd.Timestamp(date).date(),
+                        "scenario": scenario,
+                        "model_run_id": model_run_id,
+                        "made_on": stamp,
+                        "value": float(value),
+                    }
+                )
+    log.info("supply: %d static series x %d scenarios", n_series, len(scenarios))
     return rows

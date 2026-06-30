@@ -23,7 +23,7 @@ import pandas as pd
 
 from gasbalance_ml.data import PostgresData
 from gasbalance_ml.pipelines import balance, custom
-from gasbalance_ml.pipelines.forecast import generate_forecasts
+from gasbalance_ml.pipelines.forecast import generate_forecasts, generate_supply_forecasts
 from gasbalance_ml.pipelines.run import Config, run_backtest, run_tune
 from gasbalance_ml.pipelines.select import select_models
 from gasbalance_ml.plan import check_covariates
@@ -185,9 +185,10 @@ def _run_orchestrate(args: argparse.Namespace) -> int:
     refit) -> publish. Customs re-store only the series they touch; everything else falls
     back to its base weather scenario."""
     data = PostgresData()
+    plan = data.read_forecast_plan()
     # Covariate-readiness report up front (Germany first): warn for any forecastable component
     # whose required driver is missing, before we spend time fitting.
-    check_covariates(data.read_forecast_plan(), data.present_codes)
+    check_covariates(plan, data.present_codes)
     registry = load_registry(Path(args.registry))
     if not registry:
         log.warning("run: empty registry (run `ml select` first)")
@@ -198,8 +199,8 @@ def _run_orchestrate(args: argparse.Namespace) -> int:
         log.warning("run: no weather scenarios (no KP.TEMPLT.* series)")
         return 1
 
-    # 1) base component forecasts (demand today; supply is a separate workstream), per weather
-    #    scenario — fit-once / predict-many, so the cost is series x weather, not x customs.
+    # 1) base demand-component forecasts (covariate-driven), per weather scenario —
+    #    fit-once / predict-many, so the cost is series x weather, not x customs.
     component_rows = generate_forecasts(
         data,
         registry,
@@ -213,11 +214,19 @@ def _run_orchestrate(args: argparse.Namespace) -> int:
     if not component_rows:
         log.warning("run: no component forecasts produced")
         return 1
-    components = pd.DataFrame(component_rows)
+
+    # 1b) static supply components (production/LNG/linepack/imbalance/...), weather-blind. These
+    #     may carry NaN cells where a source series is absent — passed to close_balance so the
+    #     gap surfaces, then filtered before publish (the forecast table is finite-only).
+    supply_rows = generate_supply_forecasts(
+        data, plan, weather, pd.Timestamp(made_on), horizon_days=args.horizon, made_on=made_on
+    )
+    components = pd.DataFrame(component_rows + supply_rows)
     catalog = data.read_catalog()
     last_level = _last_actual_level(data)
 
     all_rows: list[dict[str, object]] = list(component_rows)
+    all_rows += [r for r in supply_rows if pd.notna(r["value"])]
     scenarios: set[str] = set(weather)
 
     # 2) close the balance for each base weather scenario
