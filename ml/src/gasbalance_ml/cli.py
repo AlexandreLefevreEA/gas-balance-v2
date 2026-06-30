@@ -191,20 +191,34 @@ def _run_orchestrate(args: argparse.Namespace) -> int:
     # whose required driver is missing, before we spend time fitting.
     check_covariates(plan, data.present_codes)
     registry = load_registry(Path(args.registry))
-    if not registry:
-        log.warning("run: empty registry (run `ml select` first)")
-        return 1
     made_on = dt.date.fromisoformat(args.made_on) if args.made_on else dt.date.today()
     weather = data.read_scenario_models()
     if not weather:
         log.warning("run: no weather scenarios (no KP.TEMPLT.* series)")
         return 1
 
+    # Every demand component must be forecast so EU.DEMAND is complete (the NaN rule), not just
+    # the ones `select` has chosen. Use the selected model where present; fall back to the
+    # seasonal_naive floor otherwise (a later `select` upgrades it). Supply / GTP / Pirineos /
+    # Moffat are produced by their own passes below.
+    effective = dict(registry)
+    for row in plan:
+        if row.family == "demand" and row.code not in effective:
+            effective[row.code] = {
+                "area": row.area,
+                "model": "seasonal_naive",
+                "params": {},
+                "model_run_id": f"seasonal_naive-{made_on}",
+            }
+    if not effective:
+        log.warning("run: no demand components found in the plan")
+        return 1
+
     # 1) base demand-component forecasts (covariate-driven), per weather scenario —
     #    fit-once / predict-many, so the cost is series x weather, not x customs.
     component_rows = generate_forecasts(
         data,
-        registry,
+        effective,
         weather,
         pd.Timestamp(made_on),
         horizon_days=args.horizon,

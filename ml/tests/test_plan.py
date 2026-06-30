@@ -36,7 +36,7 @@ def test_family_of_dispatch() -> None:
         ("Pirineos", "border_flows", None): "pirineos",
         ("Moffat", "border_flows", None): "moffat",
         ("Kyustendil", "border_flows", None): "bounded_persistence",
-        ("CH Border Flows", "border_flows", None): "demand",
+        ("CH Border Flows", "border_flows", None): "moffat",  # demand-like on German temps
         ("Waidhaus", "border_flows", None): None,  # generic border flow: not forecast
     }
     for (name, cat, sg), want in cases.items():

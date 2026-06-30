@@ -37,10 +37,11 @@ _NAMED: dict[str, str] = {
     "Turk Stream (Malkoclar)": "average_plus_outage",
     "Gela": "average_plus_outage",
     "Mazara": "average_plus_outage",
-    # Switzerland / Luxembourg / Serbia border flows are demand-proxies (legacy TOTAL_DEMAND).
-    "CH Border Flows": "demand",
-    "LU Border Flows": "demand",
-    "RS Border Flows": "demand",
+    # Switzerland / Luxembourg / Serbia border flows are demand-proxies with no `area`; legacy
+    # forecast them like demand on German temps (`area="Germany"` default) — same as Moffat.
+    "CH Border Flows": "moffat",
+    "LU Border Flows": "moffat",
+    "RS Border Flows": "moffat",
 }
 
 
