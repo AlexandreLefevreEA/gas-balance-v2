@@ -10,6 +10,9 @@ import pytest
 from gasbalance_ml.pipelines import select as sel
 
 ORIGINS = [pd.Timestamp("2021-01-01"), pd.Timestamp("2021-03-01")]
+# run_tune/run_backtest are monkeypatched, so select_series_model never touches the data
+# source — a bare stand-in is enough (typed Any to satisfy the DataSource param).
+_DATA: Any = object()
 
 
 def _fake_tune(data: Any, cfg: Any, origins: Any, n_trials: int) -> dict[str, Any]:
@@ -30,7 +33,7 @@ def _patch(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_picks_winning_candidate() -> None:
     entry = sel.select_series_model(
-        object(),
+        _DATA,
         "GOOD",
         "DE",
         ORIGINS,
@@ -49,7 +52,7 @@ def test_picks_winning_candidate() -> None:
 
 def test_falls_back_to_seasonal_floor() -> None:
     entry = sel.select_series_model(
-        object(),
+        _DATA,
         "BAD",
         "FR",
         ORIGINS,

@@ -26,7 +26,7 @@ def _raw(
     settle: float | list[float] = 100.0,
     made_on: str = "2025-12-05",
     start: str = "2026-01-01",
-    extra: list[dict] | None = None,
+    extra: list[dict[str, object]] | None = None,
 ) -> pd.DataFrame:
     """A monthly OHLC strip (period='month') as fetch() returns it, plus any `extra` contracts."""
     deliveries = pd.date_range(start, periods=months, freq="MS")
