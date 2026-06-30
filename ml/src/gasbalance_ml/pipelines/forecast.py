@@ -45,6 +45,22 @@ _STATIC_MODEL: dict[str, str] = {
 _FORECAST_MODELS = ("EC_46", "EC_AIFS_ENS")
 
 
+def _safe_actual(data: DataSource, code: str) -> pd.Series:
+    """read_daily_actual, but an absent dictionary code degrades to empty (not KeyError) — the
+    blend treats a missing covariate as a skipped layer, not a crash."""
+    try:
+        return data.read_daily_actual(code)
+    except KeyError:
+        return pd.Series(dtype=float)
+
+
+def _safe_vintage(data: DataSource, code: str, origin: pd.Timestamp) -> pd.Series:
+    try:
+        return data.read_daily_vintage(code, origin)
+    except KeyError:
+        return pd.Series(dtype=float)
+
+
 def build_covariate_driver(
     data: DataSource,
     origin: pd.Timestamp,
@@ -68,16 +84,16 @@ def build_covariate_driver(
     # filtering must be skipped (it would raise on the int index).
     history = pd.Series(dtype=float)
     if actual:
-        a = data.read_daily_actual(actual)
+        a = _safe_actual(data, actual)
         history = a[a.index < t0] if not a.empty else a
 
     future = pd.Series(dtype=float)
     if climatology:
-        c = data.read_daily_actual(climatology)
+        c = _safe_actual(data, climatology)
         future = c[c.index >= t0].copy() if not c.empty else c
 
     for code in forecasts:  # low -> high priority; the later overlay wins
-        fc = data.read_daily_vintage(code, t0)
+        fc = _safe_vintage(data, code, t0)
         if fc.empty:
             continue
         fc = fc[fc.index >= t0]
@@ -88,7 +104,10 @@ def build_covariate_driver(
         else:
             future.update(fc)
 
-    driver = pd.concat([history, future]).sort_index()
+    parts = [s for s in (history, future) if not s.empty]
+    if not parts:
+        return pd.Series(dtype=float)
+    driver = pd.concat(parts).sort_index()
     return driver[~driver.index.duplicated(keep="first")]
 
 

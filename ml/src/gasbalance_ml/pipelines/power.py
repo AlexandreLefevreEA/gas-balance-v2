@@ -34,7 +34,8 @@ log = logging.getLogger(__name__)
 _FC = ("EC_46", "EC_AIFS_ENS")  # forecast-vintage models, low -> high priority
 _RENEW = ("SOLAR", "WIND", "ROR")  # renewable fuels subtracted from load -> residual load
 _GTP_AREA = {"GB": "DE"}  # GB GTP runs on German power covariates (no UK power spot) — legacy quirk
-_SPOT_ZONE = {"DE": "DE-LU", "DK": "DK1", "IT": "IT-NORTH"}  # power-spot zone naming
+_SPOT_ZONE = {"DE": "DE-LU", "DK": "DK1", "IT": "IT-NORTH"}  # power-SPOT zone naming
+_PFC_ZONE = {"DE": "DE-LU"}  # power-FORWARD zone (IT forward = "IT", not the spot's IT-NORTH)
 _GEN_FC_ZONE = {"DE": "DE-LU"}  # generation forecast/long-term zone for DE
 # Clean spark / lignite spread efficiencies (legacy GTPModel defaults).
 _ETA_GAS, _ETA_CARBON, _ETA_LIGNITE = 0.5, 0.38, 1.05
@@ -78,8 +79,12 @@ def _gtp_static_features(data: DataSource, area: str, origin: pd.Timestamp) -> p
     """The weather-independent GTP drivers: clean spark spread, clean lignite spread, gas-plant
     availability. Built once per area (the spreads/availability don't change with weather)."""
     z = _GTP_AREA.get(area, area)
-    sz = _SPOT_ZONE.get(z, z)
-    power = build_covariate_driver(data, origin, actual=f"KP.SPOT.{sz}", forecasts=[f"KP.PFC.{sz}"])
+    power = build_covariate_driver(
+        data,
+        origin,
+        actual=f"KP.SPOT.{_SPOT_ZONE.get(z, z)}",
+        forecasts=[f"KP.PFC.{_PFC_ZONE.get(z, z)}"],
+    )
     cols: dict[str, pd.Series] = {}
     if not power.empty:
         gas = build_covariate_driver(
