@@ -14,8 +14,9 @@ export function Layout({ children }: { children: ReactNode }) {
         }}
       >
         <strong style={{ fontSize: 18 }}>Gas Balance</strong>
-        <nav>
+        <nav style={{ display: 'flex', gap: 16 }}>
           <Link to="/">Series</Link>
+          <Link to="/model">Model</Link>
         </nav>
       </header>
       <main style={{ padding: '16px 0' }}>{children}</main>

@@ -33,11 +33,12 @@ export function getObservations(codes: string[]): Promise<SeriesPoints[]> {
 
 export function getForecasts(
   codes: string[],
-  opts: { scenario?: string; made_on?: string; models?: string } = {},
+  opts: { scenario?: string; made_on?: string; models?: string; from?: string } = {},
 ): Promise<ForecastSeries[]> {
   return get('/forecasts', {
     codes: codes.join(','),
     scenario: opts.scenario,
+    from: opts.from,
     made_on: opts.made_on ?? 'latest',
     models: opts.models,
   })
