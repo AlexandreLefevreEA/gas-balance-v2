@@ -13,8 +13,3 @@ body {
   margin: 0 auto;
   padding: 0 16px;
 }
-
-select {
-  font: inherit;
-  padding: 4px 8px;
-}

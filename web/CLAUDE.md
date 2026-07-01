@@ -23,6 +23,8 @@ src/
   and only `VITE_`-prefixed vars reach the browser.
 - Routing: **React Router**. Charting: **ECharts** via `echarts-for-react` (chosen for large gas
   series). Keep bundle lean — the first cut imports full echarts (`ponytail:` split when it bites).
+- UI kit: **Mantine** (`MantineProvider` + `@mantine/core/styles.css` in `main.tsx`). Controls/layout
+  use Mantine components; charts stay ECharts. (Prebuilt stylesheet; no `postcss-preset-mantine` yet.)
 - Tests with **vitest** (`vitest run` in CI; tests co-located as `*.test.ts`).
 
 > Deferred: openapi-typescript codegen (hand-written types in `src/api/types.ts` for now) and
