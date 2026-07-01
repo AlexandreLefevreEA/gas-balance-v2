@@ -3,12 +3,30 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "React + Vite dashboard for Gas Balance v2 (scaffold — generate with `npm create vite`).",
+  "description": "React + Vite dashboard for Gas Balance v2 (series, forecasts, balance).",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "lint": "oxlint",
     "preview": "vite preview",
-    "lint": "eslint .",
-    "test": "vitest"
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.101.2",
+    "echarts": "^6.1.0",
+    "echarts-for-react": "^3.0.6",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "oxlint": "^1.71.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1",
+    "vitest": "^4.1.9"
   }
 }
