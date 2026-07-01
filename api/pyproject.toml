@@ -1,4 +1,3 @@
-# Scaffold — add src/gasbalance_api/main.py and deps during implementation.
 [project]
 name = "gasbalance-api"
 version = "0.0.0"
@@ -6,7 +5,10 @@ description = "FastAPI service serving series & forecasts from Postgres."
 requires-python = ">=3.12"
 dependencies = [
   "gasbalance-core",
-  # e.g. fastapi, uvicorn, pydantic, sqlalchemy — added when implemented
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.29",
+  "pydantic>=2",
+  # sqlalchemy, psycopg, pydantic-settings, alembic all arrive via gasbalance-core.
 ]
 
 [build-system]
