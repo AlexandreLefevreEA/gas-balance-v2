@@ -33,7 +33,14 @@ from sqlalchemy.orm import Session
 
 from gasbalance_api.main import app
 from gasbalance_core.db import SessionLocal
-from gasbalance_core.models import Covariate, Forecast, Observation, Scenario, Series
+from gasbalance_core.models import (
+    Covariate,
+    Forecast,
+    ForecastCovariate,
+    Observation,
+    Scenario,
+    Series,
+)
 
 _ALEMBIC_INI = Path(__file__).resolve().parents[2] / "infra" / "db" / "alembic.ini"
 command.upgrade(Config(str(_ALEMBIC_INI)), "head")
@@ -84,6 +91,12 @@ class Factory:
 
     def covariate(self, series_id: int, ts: dt.datetime, value: float) -> None:
         self.s.add(Covariate(series_id=series_id, ts=ts, value=value))
+        self.s.commit()
+
+    def forecast_covariate(
+        self, series_id: int, made_on: dt.date, ts: dt.datetime, value: float
+    ) -> None:
+        self.s.add(ForecastCovariate(series_id=series_id, made_on=made_on, ts=ts, value=value))
         self.s.commit()
 
     def forecast(

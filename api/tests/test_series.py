@@ -44,3 +44,21 @@ def test_covariates_daily_mean(client, factory) -> None:
 
     body = client.get("/covariates", params={"codes": "KP.TEMP.DE"}).json()
     assert body[0]["points"] == [{"date": "2024-01-01", "value": 5.0}]
+
+
+def test_forecast_covariates_latest_run_only_daily_mean(client, factory) -> None:
+    sid = factory.series("KP.TEMPFC.DE.EC_46", category="temperature_forecast", area="DE")
+    # Older run forecast an earlier hour — must be excluded (not backfilled into history).
+    factory.forecast_covariate(
+        sid, dt.date(2023, 12, 30), dt.datetime(2023, 12, 31, tzinfo=dt.UTC), 99.0
+    )
+    # Latest run: 00:00 -> 4.0, 12:00 -> 6.0 => daily mean 5.0, and only this day is returned.
+    factory.forecast_covariate(
+        sid, dt.date(2023, 12, 31), dt.datetime(2024, 1, 1, 0, tzinfo=dt.UTC), 4.0
+    )
+    factory.forecast_covariate(
+        sid, dt.date(2023, 12, 31), dt.datetime(2024, 1, 1, 12, tzinfo=dt.UTC), 6.0
+    )
+
+    body = client.get("/forecast-covariates", params={"codes": "KP.TEMPFC.DE.EC_46"}).json()
+    assert body[0]["points"] == [{"date": "2024-01-01", "value": 5.0}]

@@ -11,6 +11,7 @@ from gasbalance_api.dependencies import DbDep
 from gasbalance_api.schemas.common import SeriesPoints
 from gasbalance_api.schemas.series import SeriesOut
 from gasbalance_api.services.covariates import read_covariates
+from gasbalance_api.services.forecast_covariates import read_forecast_covariates
 from gasbalance_api.services.observations import read_observations
 from gasbalance_api.services.series import list_series
 
@@ -41,3 +42,10 @@ def get_covariates(
     codes: str, db: DbDep, frm: FromQ = None, to: dt.date | None = None
 ) -> list[SeriesPoints]:
     return read_covariates(db, codes, frm, to)
+
+
+@router.get("/forecast-covariates")
+def get_forecast_covariates(
+    codes: str, db: DbDep, frm: FromQ = None, to: dt.date | None = None
+) -> list[SeriesPoints]:
+    return read_forecast_covariates(db, codes, frm, to)

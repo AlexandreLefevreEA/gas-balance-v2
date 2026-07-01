@@ -43,10 +43,16 @@ export function getForecasts(
   })
 }
 
-// Stubs for later slices (covariate scatter, metrics view, scenario list).
 export function getCovariates(codes: string[]): Promise<SeriesPoints[]> {
   return get('/covariates', { codes: codes.join(',') })
 }
+
+// Covariate forecast: latest vintage per delivery hour, daily-mean, one series per model.
+export function getForecastCovariates(codes: string[]): Promise<SeriesPoints[]> {
+  return get('/forecast-covariates', { codes: codes.join(',') })
+}
+
+// Stubs for later slices (metrics view, scenario list).
 
 export function getMetrics(
   code: string,
